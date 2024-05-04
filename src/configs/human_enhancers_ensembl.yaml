@@ -1,0 +1,100 @@
+name: human_enhancers_ensembl
+environment:
+    image:
+        gpu: docker.io/junhongshen/nb360:updatenew
+hyperparameters:
+    dataset: human_enhancers_ensembl
+    embedder_dataset: text
+    objective: MMD
+    weight: roberta-large
+    maxsamples: 256
+    target_seq_len: 128
+
+    experiment_id: 26
+
+    seed: 0
+    epochs: 20 # 13
+    pretrain_epochs: 0 # 0, 20
+    embedder_epochs: 60 # 60
+    predictor_epochs: 0
+
+    joint_optim: True
+    alpha: 0.01 # weight for otdd 
+    beta: 1 # weight for bce
+    finetune_method: all
+    one_hot: False
+
+    lora_r: 12 # 12
+    lora_alpha: 32 # 32
+    lora_dropout: 0.1
+    lora_target_modules: ["q_proj", "v_proj"]
+
+    drop_out: 0
+    label_smoothing_factor: 0
+    activation: None
+    rc_aug: True # reverse complement augmentation
+    shift_aug: True # shift augmentation
+    
+    use_wandb: True
+    wandb_key: "ef4b923327eb2a110fda334efee4ec80feee4bc7"
+    data_parallel: False
+    quantize: False
+
+    embedder_type: "unet" #
+    embedder_init: "random"
+    ks: [9, 11, 7, 3, 3, 3, 11, 11, 11] 
+    ds: [1, 1, 1, 1, 1, 1, 7, 5, 5]
+    emedder_path: "/home/wenduoc/DASH/src_ablations/results_acc/human_enhancers_ensembl/default/0/3/network_weights.pt"
+
+    batch_size: 64
+    eval_batch_size: 1000
+    accum: 1
+    clip: 1
+    validation_freq: 1
+
+    optimizer:
+        name: AdamW
+        params:
+            lr: 0.000005 # 0.00001, 0.001
+            betas: [0.9, 0.98] 
+            weight_decay: 0
+            momentum: 0.99
+    
+    scheduler:  
+        name: WarmupLR
+        params:
+            warmup_epochs: 5
+            decay_epochs: 20
+            sched: [20, 40, 60]
+            base: 0.2
+
+    no_warmup_scheduler:  
+        name: StepLR
+        params:
+            warmup_epochs: 10
+            decay_epochs: 100
+            sched: [20, 40, 60]
+            base: 0.2
+
+    num_workers: 4
+    reproducibility: False
+    valid_split: False
+
+min_validation_period:
+    epochs: 1
+bind_mounts:
+    - host_path: /tmp
+      container_path: /data
+    - host_path: /tmp
+      container_path: /root/.cache
+resources:
+  slots_per_trial: 1
+records_per_epoch: 9281
+searcher:
+  name:  single
+  metric: accuracy
+  smaller_is_better: false
+  max_length:
+    epochs: 1
+max_restarts: 0
+entrypoint: python3 -W ignore main.py

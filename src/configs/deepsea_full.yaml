@@ -1,0 +1,102 @@
+name: DEEPSEA_FULL
+environment:
+    image:
+        gpu: docker.io/junhongshen/nb360:updatenew
+hyperparameters:
+    dataset: DEEPSEA_FULL
+    embedder_dataset: text
+    objective: MMD # otdd-exact, MMD
+    weight: roberta
+    nlayers: full
+    maxsamples: 128 # 256
+    target_seq_len: 128 
+
+    experiment_id: 233
+
+    seed: 0
+    epochs: 20 # 13
+    pretrain_epochs: 0 # 0
+    embedder_epochs: 20 #60
+    predictor_epochs: 0
+
+    joint_optim: True
+    alpha: 0.01 # weight for otdd 
+    beta: 1 # weight for bce
+    finetune_method: all # all, lora, freeze
+    one_hot: True # one hot encoding
+
+    lora_r: 12 # 12
+    lora_alpha: 32 # 32
+    lora_dropout: 0.1
+    lora_target_modules: ["q_proj", "v_proj"]
+
+    drop_out: 0.2
+    label_smoothing_factor: 0
+    activation: None
+    rc_aug: False # reverse complement augmentation
+    shift_aug: False  # shift augmentation
+
+    use_wandb: True
+    wandb_key: "ef4b923327eb2a110fda334efee4ec80feee4bc7" # add your own wandb key
+    data_parallel: False
+    quantize: True
+
+    embedder_type: "resnet" # dash-->resnet, unet, dash random
+    embedder_init: "pretrained" # random, pretrained
+    ks: [15, 19, 19, 7, 7, 7, 19, 19, 19]  
+    ds: [1, 15, 15, 1, 1, 1, 15, 15, 15]
+    # channels: [16, 16, 32, 64]
+    emedder_path: "/home/wenduoc/ORCA/clean/gene-orca/pretrained_embedders/DEEPSEA_FULL_pretrained_model_2.pth"
+    
+    batch_size: 128
+    eval_batch_size: 1000
+    accum: 1
+    clip: 1 # 1 
+    validation_freq: 1
+
+    optimizer:
+        name: Adam # Adam
+        params:
+            lr: 0.00005
+            betas: [0.9, 0.98] 
+            weight_decay: 0.00001
+            momentum: 0.99
+    
+    scheduler:  
+        name: WarmupLR
+        params:
+            warmup_epochs: 5 #10
+            decay_epochs: 20
+            sched: [20, 40, 60]
+            base: 0.2
+
+    no_warmup_scheduler:  
+        name: StepLR
+        params:
+            warmup_epochs: 10
+            decay_epochs: 100
+            sched: [20, 40, 60]
+            base: 0.2
+
+    num_workers: 4
+    reproducibility: False
+    valid_split: False
+
+min_validation_period:
+    epochs: 1
+bind_mounts:
+    - host_path: /tmp
+      container_path: /data
+    - host_path: /tmp
+      container_path: /root/.cache
+resources:
+  slots_per_trial: 1
+records_per_epoch: 9281
+searcher:
+  name:  single
+  metric: accuracy
+  smaller_is_better: false
+  max_length:
+    epochs: 1
+max_restarts: 0
+entrypoint: python3 -W ignore main.py
