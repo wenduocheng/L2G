@@ -21,7 +21,7 @@ from datasets import load_dataset
 # from genomic_benchmarks.dataset_getters.utils import  LetterTokenizer, build_vocab, check_seq_lengths 
 import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
+import subprocess
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -230,7 +230,7 @@ class wrapper1D(torch.nn.Module):
         set_grad_state(self.predictor, True)#False)
 
 
-        self.gamma = torch.nn.parameter.Parameter(torch.tensor(0.5))
+        # self.gamma = torch.nn.parameter.Parameter(torch.tensor(0.5))
         # print('intial gamma:',self.gamma)
       
 
@@ -264,12 +264,12 @@ class wrapper1D(torch.nn.Module):
                     # x = x.reshape(x.shape[0],-1)
                     # print('250',x.shape)
                     x = self.predictor(x)
-            # return x
+            return x
             
-            gamma = torch.sigmoid(self.gamma) # make gamma between 0 and 1
-            # print('270',gamma)
-            out = gamma * fno + (1-gamma)*x
-            return out        
+            # gamma = torch.sigmoid(self.gamma) # make gamma between 0 and 1
+            # # print('270',gamma)
+            # out = gamma * fno + (1-gamma)*x
+            # return out        
         
         
         # elif self.weight == 'hyenadna-small-32k-seqlen':
@@ -313,6 +313,7 @@ class Embeddings1D(nn.Module):
    
         self.embedder_type = args.embedder_type if args is not None else None
         self.one_hot = args.one_hot if args is not None else False
+
         if self.embedder_type is None or self.embedder_type == 'random':
             self.projection = nn.Conv1d(input_shape[1], embed_dim, kernel_size=self.stack_num, stride=self.stack_num)
             conv_init(self.projection)
@@ -337,10 +338,34 @@ class Embeddings1D(nn.Module):
             num_classes=output_shape
             mid_channels=min(4 ** (num_classes // 10 + 1), 64)
             dropout=0
-            ks=args.ks 
-            ds=args.ds
-            # ks=[15, 19, 19, 7, 7, 7, 19, 19, 19]
-            # ds=[1, 15, 15, 1, 1, 1, 15, 15, 15]
+            if args.run_dash:
+                dash_result_path = f"./dash_results/{args.dataset}/wrn/wrn/{args.seed}/dash_final_results.npy"
+                if not os.path.exists(dash_result_path):
+                    print('Start to run DASH!')
+                    subprocess.run(f"python -W ignore ./DASH/main.py --dataset {args.dataset} --arch wrn --experiment_id wrn --seed {args.seed} --valid_split 0", shell=True, check=True)
+                    print('DASH Finish!')
+                else:
+                    print('Found existing DASH results!')
+                # Load the results file
+                
+                dash_results = np.load(dash_result_path,allow_pickle=True).item()
+                print(type(dash_results))
+                print(dash_results)
+                ks = dash_results['ks']
+                ds = dash_results['ds']
+                dropout = dash_results['drop out']
+                args.embedder_optimizer.params.lr = dash_results['lr']
+                args.embedder_optimizer.params.weight_decay = dash_results['weight decay']
+                args.embedder_optimizer.params.momentum = dash_results['momentum']
+                print('DASH result:', dash_results['test best score'])
+                
+            else:
+                try:
+                    ks=args.ks 
+                    ds=args.ds
+                except: # use default kernel sizes and dilation sizes
+                    ks=[15, 19, 19, 7, 7, 7, 19, 19, 19]
+                    ds=[1, 15, 15, 1, 1, 1, 15, 15, 15]
             activation=None
             remain_shape=False
             self.dash = ResNet1D_v3(in_channels = in_channel, mid_channels=mid_channels, num_pred_classes=num_classes, dropout_rate=dropout, ks = ks, ds = ds, activation=activation, remain_shape=remain_shape, input_shape=input_shape, embed_dim=embed_dim)
@@ -529,6 +554,7 @@ def get_tgt_model(args, root, sample_shape, num_classes, loss, add_loss=False, u
     
   
     wrapper_func = wrapper1D 
+   
     tgt_model = wrapper_func(sample_shape, num_classes, weight=args.weight, train_epoch=args.embedder_epochs, activation=args.activation, target_seq_len=args.target_seq_len, drop_out=args.drop_out, from_scratch=False, args=args)
     if hasattr(args, 'data_parallel') and args.data_parallel:
         tgt_model = nn.DataParallel(tgt_model) 

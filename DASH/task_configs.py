@@ -175,9 +175,9 @@ def get_config(dataset):
         kernel_choices_default, dilation_choices_default = [3, 5, 7, 9, 11], [1, 3, 5, 7]
         loss = nn.CrossEntropyLoss()
         
-        batch_size = 64 # 64
-        # arch_default = 'wrn'
-        arch_default = 'unet'
+        batch_size = 256 # 64
+        arch_default = 'wrn'
+        # arch_default = 'unet'
         
         # config_kwargs['activation'] = 'softmax'
         # config_kwargs['grad_scale'] = 10
@@ -219,7 +219,7 @@ def get_config(dataset):
         kernel_choices_default, dilation_choices_default = [3, 5, 7, 9, 11], [1, 3, 5, 7]
         loss = nn.CrossEntropyLoss()
         
-        batch_size = 64 # 64
+        batch_size = 256 # 64
         arch_default = 'wrn'
         # arch_default = 'unet'
         if dataset == "enhancer":
