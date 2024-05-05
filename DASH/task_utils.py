@@ -7,6 +7,8 @@ from sklearn import metrics
 import operator
 from itertools import product
 from functools import reduce, partial
+import sys 
+sys.path.append('./')
 from src.data_loaders import load_list
 
 

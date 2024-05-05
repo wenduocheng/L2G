@@ -18,9 +18,10 @@ from torch.utils.data.sampler import SubsetRandomSampler
 import scipy.io 
 from random import random
 from torch.utils.data import DataLoader 
-#from torchtext.data.utils import get_tokenizer
-from helper_scripts.genomic_benchmarks_utils import GenomicBenchmarkDataset, CharacterTokenizer, combine_datasets, NucleotideTransformerDataset 
 import copy
+import sys 
+sys.path.append('./')
+from src.helper_scripts.genomic_benchmarks_utils import GenomicBenchmarkDataset, CharacterTokenizer, combine_datasets, NucleotideTransformerDataset 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 

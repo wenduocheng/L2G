@@ -8,9 +8,11 @@ from scipy import stats
 import operator
 from itertools import product
 from functools import reduce, partial
-from data_loaders import load_list
 from timm.models.layers import trunc_normal_
 import copy
+import sys 
+sys.path.append('./')
+from src.data_loaders import load_list
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 

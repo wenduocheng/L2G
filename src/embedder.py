@@ -15,10 +15,8 @@ from utils import conv_init, embedder_init, embedder_placeholder, adaptive_poole
 import copy
 from networks.wrn1d import ResNet1D, ResNet1D_v2, ResNet1D_v3
 from networks.vq import Encoder, Encoder_v2
-# from data_loaders import load_deepsea 
 from datasets import load_dataset
-#from torchtext.data.utils import get_tokenizer 
-# from genomic_benchmarks.dataset_getters.utils import  LetterTokenizer, build_vocab, check_seq_lengths 
+ 
 import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 import subprocess

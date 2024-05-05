@@ -12,10 +12,11 @@ from timeit import default_timer
 import sklearn  #
 from relax.nas import MixedOptimizer
 from dash import MixtureSupernet
-from task_configs import get_data, get_config, get_model, get_hp_configs, get_optimizer
-from src.task_configs import get_metric
+from dash_task_configs import get_data, get_config, get_model, get_hp_configs, get_optimizer
 from task_utils import count_params, print_grad, calculate_stats
-
+import sys 
+sys.path.append('./')
+from src.task_configs import get_metric
 
 def main():
 

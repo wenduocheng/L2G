@@ -18,12 +18,14 @@ from networks.wrn1d import ResNet1D
 from networks.vq import Encoder
 
 # import data loaders, task-specific losses and metrics
-from data_loaders import load_cifar, load_mnist, load_deepsea, load_darcy_flow, load_psicov, load_music, load_ecg, load_satellite, load_ninapro, load_cosmic, load_spherical, load_fsd 
+# from data_loaders import load_cifar, load_mnist, load_deepsea, load_darcy_flow, load_psicov, load_music, load_ecg, load_satellite, load_ninapro, load_cosmic, load_spherical, load_fsd 
+# from task_utils import FocalLoss, LpLoss
+# from task_utils import mask, accuracy, accuracy_onehot, auroc, psicov_mae, ecg_f1, fnr, map_value
+# from task_utils import mcc
+# from sklearn import metrics
+import sys 
+sys.path.append('./')
 from src.data_loaders import load_deepsea_full, load_genomic_benchmarks, load_nucleotide_transformer # 
-from task_utils import FocalLoss, LpLoss
-from task_utils import mask, accuracy, accuracy_onehot, auroc, psicov_mae, ecg_f1, fnr, map_value
-from task_utils import mcc
-from sklearn import metrics
 # import customized optimizers
 # from optimizers import ExpGrad
 
