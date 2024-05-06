@@ -512,7 +512,7 @@ def get_config(dataset):
 
 def get_hp_configs(dataset, n_train):
 
-    epochs = 80
+    epochs = 40
     if n_train < 50:
         subsamping_ratio = 0.2
     elif n_train < 100:
@@ -522,11 +522,11 @@ def get_hp_configs(dataset, n_train):
     else:
         subsamping_ratio = 0.01
 
-    # lrs = 0.1 ** np.arange(1, 4)
-    lrs = 0.1 ** np.arange(1, 5)
+    lrs = 0.1 ** np.arange(1, 3)
+    # lrs = 0.1 ** np.arange(1, 5)
 
-    dropout_rates = [0, 0.05]
-    wd = [5e-4, 5e-6]
+    dropout_rates = [0.05]
+    wd = [5e-4]
     momentum = [0.9, 0.99]
 
     if dataset in ['PSICOV', 'COSMIC', 'FSD']: # 2D dense

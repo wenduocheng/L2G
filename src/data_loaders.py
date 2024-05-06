@@ -258,14 +258,14 @@ class DeepseaDataset(torch.utils.data.Dataset):
 def load_deepsea_full(root, batch_size, one_hot = True, valid_split=-1,quantize=False,rc_aug=False, shift_aug=False):
     path = root + "/deepsea_full/"
 
-    with h5py.File(path+"deepsea_full_train.mat", 'r') as file: # 'train.mat'
+    with h5py.File(path+"train.mat", 'r') as file: # 'train.mat'
         x_train = file['trainxdata']
         y_train = file['traindata']
         x_train = np.transpose(x_train, (2, 1, 0))    
         y_train = np.transpose(y_train, (1, 0))   
 
-    valid_data = scipy.io.loadmat(path+"deepsea_full_valid.mat")
-    test_data = scipy.io.loadmat(path+"deepsea_full_test.mat")
+    valid_data = scipy.io.loadmat(path+"valid.mat")
+    test_data = scipy.io.loadmat(path+"test.mat")
     x_valid = valid_data["validxdata"]
     y_valid = valid_data["validdata"]
     x_test = test_data["testxdata"]
