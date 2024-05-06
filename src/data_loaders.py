@@ -179,85 +179,46 @@ def load_deepsea(root, batch_size, one_hot = True, valid_split=-1,rc_aug=False, 
 
 
 
+
+        
+
 # deepsea full dataset
 # def load_deepsea_full(root, batch_size, one_hot = True, valid_split=-1,quantize=False,rc_aug=False, shift_aug=False):
-#     import mat73 
-#     train_data = mat73.loadmat(root + '/deepsea_full' + '/deepsea_full_train.mat')
+#     # import mat73
+#     # train_data = mat73.loadmat(root + '/deepsea_full' + '/deepsea_full_train.mat')
+
+#     trainxdata = np.load(root + '/deepsea_full' + '/deepsea_full_trainx.npz')['data']
+#     trainydata = np.load(root + '/deepsea_full' + '/deepsea_full_trainy.npz')['data']
 #     valid_data = scipy.io.loadmat(root + '/deepsea_full' + '/deepsea_full_valid.mat')
 #     test_data = scipy.io.loadmat(root + '/deepsea_full' + '/deepsea_full_test.mat')
-    
 
+#     # with h5py.File(path+"train.mat", 'r') as file:
+#     #     x_train = file['trainxdata']
+#     #     y_train = file['traindata']
+#     #     x_train = np.transpose(x_train, (2, 1, 0))    
+#     #     y_train = np.transpose(y_train, (1, 0)) 
+        
 #     if one_hot:
-#         x_train = torch.from_numpy(X_train).transpose(-1, -2).float() 
-#         x_val = torch.from_numpy(X_valid).transpose(-1, -2).float()
-#         x_test = torch.from_numpy(X_test).transpose(-1, -2).float()
-#     else:
-#         x_train = torch.from_numpy(np.argmax(X_train, axis=2)).unsqueeze(-2).float() 
-#         x_val = torch.from_numpy(np.argmax(X_valid, axis=2)).unsqueeze(-2).float()
-#         x_test = torch.from_numpy(np.argmax(X_test, axis=2)).unsqueeze(-2).float()
-
-#     if not quantize:
-#         x_train = torch.FloatTensor(train_data['trainxdata'])  
-#         y_train= torch.FloatTensor(train_data['traindata']) 
-#         x_val = torch.FloatTensor(valid_data['validxdata'])  
-#         y_val= torch.FloatTensor(valid_data['validdata'])  
-#         x_test = torch.FloatTensor(test_data['testxdata'])  
-#         y_test= torch.FloatTensor(test_data['testdata'])  
-#     else:
-#         x_train = torch.FloatTensor(train_data['trainxdata']).to(torch.bfloat16)  
-#         y_train= torch.FloatTensor(train_data['traindata']).to(torch.bfloat16) 
-#         x_val = torch.FloatTensor(valid_data['validxdata']).to(torch.bfloat16)  
-#         y_val= torch.FloatTensor(valid_data['validdata']).to(torch.bfloat16)  
-#         x_test = torch.FloatTensor(test_data['testxdata']).to(torch.bfloat16)  
-#         y_test= torch.FloatTensor(test_data['testdata']).to(torch.bfloat16) 
-
-#     print(x_train.shape)
-#     print(y_train.shape)
-#     print(x_val.shape)
-#     print(y_val.shape)
-#     print(x_test.shape)
-#     print(y_test.shape)
-
-
-#     train_loader = torch.utils.data.DataLoader(dataset = torch.utils.data.TensorDataset(x_train, y_train), batch_size = batch_size, shuffle=True, num_workers=0, pin_memory=False)
-#     val_loader = torch.utils.data.DataLoader(dataset = torch.utils.data.TensorDataset(x_val, y_val), batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=False)
-#     test_loader = torch.utils.data.DataLoader(dataset = torch.utils.data.TensorDataset(x_test, y_test), batch_size = batch_size, shuffle=False, num_workers=0, pin_memory=False)
-
-#     print("Train dataset samples = {}, batches = {}".format(x_train.shape[0], len(train_loader)))
-#     print("Valid dataset samples = {}, batches = {}".format(x_val.shape[0], len(val_loader)))
-#     print("Test dataset samples = {}, batches = {}".format(x_test.shape[0], len(test_loader)))
-
-#     return train_loader, val_loader, test_loader
-
-# def load_deepsea_full(root, batch_size, one_hot = True, valid_split=-1,quantize=False,rc_aug=False, shift_aug=False):
-#     import mat73 
-#     train_data = mat73.loadmat(root + '/deepsea_full' + '/deepsea_full_train.mat')
-#     valid_data = scipy.io.loadmat(root + '/deepsea_full' + '/deepsea_full_valid.mat')
-#     test_data = scipy.io.loadmat(root + '/deepsea_full' + '/deepsea_full_test.mat')
-    
-
-#     if one_hot:
-#         x_train = torch.from_numpy(train_data['trainxdata']).float() 
+#         x_train = torch.from_numpy(trainxdata).float() 
 #         x_val = torch.from_numpy(valid_data['validxdata']).float() 
 #         x_test = torch.from_numpy(test_data['testxdata']).float() 
 #     else:
-#         x_train = torch.from_numpy(np.argmax(train_data['trainxdata'], axis=1)).unsqueeze(-2).float() 
+#         x_train = torch.from_numpy(np.argmax(trainxdata, axis=1)).unsqueeze(-2).float() 
 #         x_val = torch.from_numpy(np.argmax(valid_data['validxdata'], axis=1)).unsqueeze(-2).float()
-#         x_test = torch.from_numpy(np.argmax(test_data['testxdata'], axis=1)).unsqueeze(-2).float()
+#         x_test = torch.from_numpy(np.argmax(test_data['testxdata'], axis=1)).unsqueeze(-2).float() 
     
-#     y_train = torch.from_numpy(train_data['traindata']).float() 
+#     y_train = torch.from_numpy(trainydata).float() 
 #     y_val = torch.from_numpy(valid_data['validdata']).float()  
 #     y_test = torch.from_numpy(test_data['testdata']).float()  
-    
-#     del train_data, valid_data, test_data
+#     del trainxdata, trainydata, valid_data, test_data
 
 #     if quantize:
 #         x_train = x_train.to(torch.bfloat16)  
-#         y_train = y_train.to(torch.bfloat16) 
+#         # y_train = y_train.to(torch.bfloat16) 
 #         x_val = x_val.to(torch.bfloat16)  
-#         y_val = y_val.to(torch.bfloat16)  
+#         # y_val = y_val.to(torch.bfloat16)  
 #         x_test = x_test.to(torch.bfloat16)  
-#         y_test = y_test.to(torch.bfloat16) 
+#         # y_test = y_test.to(torch.bfloat16) 
 
 #     print('x_train',x_train.shape)
 #     print('y_train',y_train.shape)
@@ -270,77 +231,59 @@ def load_deepsea(root, batch_size, one_hot = True, valid_split=-1,rc_aug=False, 
 #         train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_train, y_train), batch_size = batch_size, shuffle=True, num_workers=4, pin_memory=True)
 #         val_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_val, y_val), batch_size = batch_size, shuffle=True, num_workers=4, pin_memory=True)
 #         test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_test, y_test), batch_size = batch_size, shuffle=False, num_workers=4, pin_memory=True)
-        
-#         print("Train dataset samples = {}, batches = {}".format(x_train.shape[0], len(train_loader)))
-#         print("Valid dataset samples = {}, batches = {}".format(x_val.shape[0], len(val_loader)))
-#         print("Test dataset samples = {}, batches = {}".format(x_test.shape[0], len(test_loader)))
+#         del x_train, y_train, x_val, y_val, x_test, y_test
 #         return train_loader, val_loader, test_loader
 #     else:
 #         train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_train, y_train), batch_size = batch_size, shuffle=True, num_workers=4, pin_memory=True)
 #         test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_test, y_test), batch_size = batch_size, shuffle=False, num_workers=4, pin_memory=True)
-#         print("Train dataset samples = {}, batches = {}".format(x_train.shape[0], len(train_loader)))
-#         print("Test dataset samples = {}, batches = {}".format(x_test.shape[0], len(test_loader)))
+#         del x_train, y_train, x_val, y_val, x_test, y_test
 #         return train_loader, None, test_loader
         
+class DeepseaDataset(torch.utils.data.Dataset):
+    def __init__(self, X, y):
+        self.X = X
+        self.y = y
 
-# deepsea full dataset
+    def __getitem__(self, idx):
+        feats = self.X[idx]
+        label = self.y[idx]
+        feats = torch.from_numpy(feats).to(torch.float32)
+        label = torch.from_numpy(label).to(torch.float32)
+
+        return feats ,label
+
+    def __len__(self):
+        return len(self.X)
+
 def load_deepsea_full(root, batch_size, one_hot = True, valid_split=-1,quantize=False,rc_aug=False, shift_aug=False):
-    # import mat73
-    # train_data = mat73.loadmat(root + '/deepsea_full' + '/deepsea_full_train.mat')
+    path = root + "/deepsea_full/"
 
-    trainxdata = np.load(root + '/deepsea_full' + '/deepsea_full_trainx.npz')['data']
-    trainydata = np.load(root + '/deepsea_full' + '/deepsea_full_trainy.npz')['data']
-    valid_data = scipy.io.loadmat(root + '/deepsea_full' + '/deepsea_full_valid.mat')
-    test_data = scipy.io.loadmat(root + '/deepsea_full' + '/deepsea_full_test.mat')
+    with h5py.File(path+"deepsea_full_train.mat", 'r') as file: # 'train.mat'
+        x_train = file['trainxdata']
+        y_train = file['traindata']
+        x_train = np.transpose(x_train, (2, 1, 0))    
+        y_train = np.transpose(y_train, (1, 0))   
 
-    # with h5py.File(path+"train.mat", 'r') as file:
-    #     x_train = file['trainxdata']
-    #     y_train = file['traindata']
-    #     x_train = np.transpose(x_train, (2, 1, 0))    
-    #     y_train = np.transpose(y_train, (1, 0)) 
-        
-    if one_hot:
-        x_train = torch.from_numpy(trainxdata).float() 
-        x_val = torch.from_numpy(valid_data['validxdata']).float() 
-        x_test = torch.from_numpy(test_data['testxdata']).float() 
-    else:
-        x_train = torch.from_numpy(np.argmax(trainxdata, axis=1)).unsqueeze(-2).float() 
-        x_val = torch.from_numpy(np.argmax(valid_data['validxdata'], axis=1)).unsqueeze(-2).float()
-        x_test = torch.from_numpy(np.argmax(test_data['testxdata'], axis=1)).unsqueeze(-2).float() 
-    
-    y_train = torch.from_numpy(trainydata).float() 
-    y_val = torch.from_numpy(valid_data['validdata']).float()  
-    y_test = torch.from_numpy(test_data['testdata']).float()  
-    del trainxdata, trainydata, valid_data, test_data
+    valid_data = scipy.io.loadmat(path+"deepsea_full_valid.mat")
+    test_data = scipy.io.loadmat(path+"deepsea_full_test.mat")
+    x_valid = valid_data["validxdata"]
+    y_valid = valid_data["validdata"]
+    x_test = test_data["testxdata"]
+    y_test = test_data["testdata"]
 
-    if quantize:
-        x_train = x_train.to(torch.bfloat16)  
-        # y_train = y_train.to(torch.bfloat16) 
-        x_val = x_val.to(torch.bfloat16)  
-        # y_val = y_val.to(torch.bfloat16)  
-        x_test = x_test.to(torch.bfloat16)  
-        # y_test = y_test.to(torch.bfloat16) 
+    train_dataset = DeepseaDataset(x_train, y_train)
+    valid_dataset = DeepseaDataset(x_valid, y_valid)
+    test_dataset = DeepseaDataset(x_test, y_test)
 
-    print('x_train',x_train.shape)
-    print('y_train',y_train.shape)
-    print('x_val',x_val.shape)
-    print('y_val',y_val.shape)
-    print('x_test',x_test.shape)
-    print('y_test',y_test.shape)
+    train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
+    valid_loader = torch.utils.data.DataLoader(dataset=valid_dataset, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
+    test_loader = torch.utils.data.DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
 
-    if valid_split > 0:
-        train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_train, y_train), batch_size = batch_size, shuffle=True, num_workers=4, pin_memory=True)
-        val_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_val, y_val), batch_size = batch_size, shuffle=True, num_workers=4, pin_memory=True)
-        test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_test, y_test), batch_size = batch_size, shuffle=False, num_workers=4, pin_memory=True)
-        del x_train, y_train, x_val, y_val, x_test, y_test
-        return train_loader, val_loader, test_loader
-    else:
-        train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_train, y_train), batch_size = batch_size, shuffle=True, num_workers=4, pin_memory=True)
-        test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_test, y_test), batch_size = batch_size, shuffle=False, num_workers=4, pin_memory=True)
-        del x_train, y_train, x_val, y_val, x_test, y_test
-        return train_loader, None, test_loader
-        
+    print("No. of train samples = {}, batches = {}".format(train_dataset.__len__(), train_loader.__len__()))
+    print("No. of valid samples = {}, batches = {}".format(valid_dataset.__len__(), valid_loader.__len__()))
+    print("No. of test samples = {}, batches = {}".format(test_dataset.__len__(), test_loader.__len__()))
 
+    return train_loader, valid_loader, test_loader
 
 def load_deepstarr_dev(root, batch_size, one_hot = True, valid_split=-1,rc_aug=True, shift_aug=False):
     filename = root + '/deepstarr' + '/Sequences_activity_all.txt'
