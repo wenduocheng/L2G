@@ -10,7 +10,7 @@ hyperparameters:
     maxsamples: 256 #512
     target_seq_len: 128 #512
 
-    experiment_id: 13
+    experiment_id: 14
 
     seed: 0
     epochs: 25 #25
@@ -47,7 +47,7 @@ hyperparameters:
     emedder_path: "/home/wenduoc/DASH/src/results_acc/H3K4me1/wrn/wrn/0/network_weights.pt"
 
 
-    batch_size: 32 
+    batch_size: 64 
     eval_batch_size: 1000
     accum: 1
     clip: 1 

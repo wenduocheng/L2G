@@ -10,20 +10,20 @@ hyperparameters:
     maxsamples: 256 #512
     target_seq_len: 512 #256 #512
 
-    experiment_id: 6 
+    experiment_id: 7 
 
     seed: 0
     epochs: 25 #25
     embedder_epochs: 100 
-    pretrain_epochs: 0 
+    pretrain_epochs: 60 
     predictor_epochs: 0 
 
     joint_optim: True
-    alpha: 0.01 # weight for otdd 
+    alpha: 1 # weight for otdd 
     beta: 1 # weight for bce
     finetune_method: all
     one_hot: True
-
+    run_dash: True
     lora_r: 12 # 12
     lora_alpha: 32 # 32
     lora_dropout: 0.1

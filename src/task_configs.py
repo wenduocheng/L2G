@@ -158,53 +158,53 @@ def get_config(root, args):
             sample_shape[1] = 1
             sample_shape = tuple(sample_shape)
    
-    elif dataset == "DOMAINNET":
-        dims, sample_shape, num_classes = 1, (1, 3, 224, 224), 40
-        loss = nn.CrossEntropyLoss()
+    # elif dataset == "DOMAINNET":
+    #     dims, sample_shape, num_classes = 1, (1, 3, 224, 224), 40
+    #     loss = nn.CrossEntropyLoss()
 
-    elif dataset[:5] == "CIFAR":
-        dims, sample_shape, num_classes = 2,  (1, 3, 32, 32), 10 if dataset in ['CIFAR10', 'CIFAR10-PERM'] else 100
-        loss = nn.CrossEntropyLoss()
+    # elif dataset[:5] == "CIFAR":
+    #     dims, sample_shape, num_classes = 2,  (1, 3, 32, 32), 10 if dataset in ['CIFAR10', 'CIFAR10-PERM'] else 100
+    #     loss = nn.CrossEntropyLoss()
 
-    elif dataset == 'SPHERICAL':
-        dims, sample_shape, num_classes = 2, (1, 3, 60, 60), 100
-        loss = nn.CrossEntropyLoss() 
+    # elif dataset == 'SPHERICAL':
+    #     dims, sample_shape, num_classes = 2, (1, 3, 60, 60), 100
+    #     loss = nn.CrossEntropyLoss() 
 
-    elif dataset == "DARCY-FLOW-5":
-        dims, sample_shape, num_classes = 2, (1, 3, 85, 85), 1
-        loss = LpLoss(size_average=False)
-        args.infer_label = True
+    # elif dataset == "DARCY-FLOW-5":
+    #     dims, sample_shape, num_classes = 2, (1, 3, 85, 85), 1
+    #     loss = LpLoss(size_average=False)
+    #     args.infer_label = True
 
-    elif dataset == "PSICOV":
-        dims, sample_shape, num_classes = 2, (1, 57, 512, 512), 1
-        loss = nn.MSELoss(reduction='mean')
-        args.infer_label = True
+    # elif dataset == "PSICOV":
+    #     dims, sample_shape, num_classes = 2, (1, 57, 512, 512), 1
+    #     loss = nn.MSELoss(reduction='mean')
+    #     args.infer_label = True
 
-    elif dataset == "NINAPRO": 
-        dims, sample_shape, num_classes = 2, (1, 1, 16, 52), 18
-        loss = FocalLoss(alpha=1)
+    # elif dataset == "NINAPRO": 
+    #     dims, sample_shape, num_classes = 2, (1, 1, 16, 52), 18
+    #     loss = FocalLoss(alpha=1)
 
-    elif dataset == "COSMIC":
-        dims, sample_shape, num_classes = 2, (1, 1, 128, 128), 1
-        loss = nn.BCEWithLogitsLoss()
-        args.infer_label = True
+    # elif dataset == "COSMIC":
+    #     dims, sample_shape, num_classes = 2, (1, 1, 128, 128), 1
+    #     loss = nn.BCEWithLogitsLoss()
+    #     args.infer_label = True
 
-    elif dataset == 'FSD':
-        dims, sample_shape, num_classes = 2, (1, 1, 96, 102), 200
-        loss = nn.BCEWithLogitsLoss(pos_weight=10 * torch.ones((200, )))
-        args.infer_label = True
+    # elif dataset == 'FSD':
+    #     dims, sample_shape, num_classes = 2, (1, 1, 96, 102), 200
+    #     loss = nn.BCEWithLogitsLoss(pos_weight=10 * torch.ones((200, )))
+    #     args.infer_label = True
         
-    elif dataset[:5] == "MNIST":
-        dims, sample_shape, num_classes = 1, (1, 1, 784), 10
-        loss = F.nll_loss
+    # elif dataset[:5] == "MNIST":
+    #     dims, sample_shape, num_classes = 1, (1, 1, 784), 10
+    #     loss = F.nll_loss
     
-    elif dataset == "ECG": 
-        dims, sample_shape, num_classes = 1, (1, 1, 1000), 4
-        loss = nn.CrossEntropyLoss()   
+    # elif dataset == "ECG": 
+    #     dims, sample_shape, num_classes = 1, (1, 1, 1000), 4
+    #     loss = nn.CrossEntropyLoss()   
 
-    elif dataset == "SATELLITE":
-        dims, sample_shape, num_classes = 1, (1, 1, 46), 24
-        loss = nn.CrossEntropyLoss()
+    # elif dataset == "SATELLITE":
+    #     dims, sample_shape, num_classes = 1, (1, 1, 46), 24
+    #     loss = nn.CrossEntropyLoss()
 
     elif dataset == "DEEPSEA":
         # dims, sample_shape, num_classes = 1, (1, 4, 1000), 36
@@ -293,6 +293,7 @@ def get_metric(root, dataset):
     
     if dataset == "deepstarr":
         return pcc_deepstarr, np.max
+        # return pcc, np.max
 
     if dataset == "deepstarr_dev" or dataset == "deepstarr_hk":
         return inverse_score(pcc), np.max

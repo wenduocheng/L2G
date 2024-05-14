@@ -1,0 +1,206 @@
+/var/spool/slurmd/job4113167/slurm_script: line 12: activate: No such file or directory
+
+    Copy/Paste this in your local terminal to ssh tunnel with remote
+    -----------------------------------------------------------------
+    ssh -N -L 9332:10.1.121.159:9332 wenduoc@lanec1.compbio.cs.cmu.edu
+    -----------------------------------------------------------------
+    Then open a browser on your local machine to the following address
+    ------------------------------------------------------------------
+    localhost:9332  (prefix w/ https:// if using password)
+    ------------------------------------------------------------------
+    
+[I 2024-05-08 23:52:48.278 ServerApp] Extension package jupyter_server_terminals took 0.1123s to import
+[I 2024-05-08 23:52:50.414 ServerApp] jupyter_lsp | extension was successfully linked.
+[I 2024-05-08 23:52:50.429 ServerApp] jupyter_server_terminals | extension was successfully linked.
+[W 2024-05-08 23:52:50.437 LabApp] 'iopub_data_rate_limit' has moved from NotebookApp to ServerApp. This config will be passed to ServerApp. Be sure to update your config before our next release.
+[W 2024-05-08 23:52:50.437 LabApp] 'password' has moved from NotebookApp to ServerApp. This config will be passed to ServerApp. Be sure to update your config before our next release.
+[W 2024-05-08 23:52:50.437 LabApp] 'token' has moved from NotebookApp to ServerApp. This config will be passed to ServerApp. Be sure to update your config before our next release.
+[W 2024-05-08 23:52:50.446 ServerApp] ServerApp.iopub_data_rate_limit config is deprecated in 2.0. Use ZMQChannelsWebsocketConnection.iopub_data_rate_limit.
+[W 2024-05-08 23:52:50.446 ServerApp] ServerApp.token config is deprecated in 2.0. Use IdentityProvider.token.
+[I 2024-05-08 23:52:50.446 ServerApp] jupyterlab | extension was successfully linked.
+[I 2024-05-08 23:52:50.461 ServerApp] notebook | extension was successfully linked.
+[I 2024-05-08 23:52:56.661 ServerApp] notebook_shim | extension was successfully linked.
+[W 2024-05-08 23:52:56.976 ServerApp] All authentication is disabled.  Anyone who can connect to this server will be able to run code.
+[I 2024-05-08 23:52:56.979 ServerApp] notebook_shim | extension was successfully loaded.
+[I 2024-05-08 23:52:56.987 ServerApp] jupyter_lsp | extension was successfully loaded.
+[I 2024-05-08 23:52:56.991 ServerApp] jupyter_server_terminals | extension was successfully loaded.
+[I 2024-05-08 23:52:57.030 LabApp] JupyterLab extension loaded from /home/wenduoc/mambaforge/envs/L2G/lib/python3.8/site-packages/jupyterlab
+[I 2024-05-08 23:52:57.031 LabApp] JupyterLab application directory is /home/wenduoc/mambaforge/envs/L2G/share/jupyter/lab
+[I 2024-05-08 23:52:57.033 LabApp] Extension Manager is 'pypi'.
+[I 2024-05-08 23:52:57.102 ServerApp] jupyterlab | extension was successfully loaded.
+[I 2024-05-08 23:52:57.112 ServerApp] notebook | extension was successfully loaded.
+[I 2024-05-08 23:52:57.113 ServerApp] Serving notebooks from local directory: /home/wenduoc/ORCA/L2G
+[I 2024-05-08 23:52:57.114 ServerApp] Jupyter Server 2.14.0 is running at:
+[I 2024-05-08 23:52:57.114 ServerApp] http://10.1.121.159:9332/tree
+[I 2024-05-08 23:52:57.114 ServerApp]     http://127.0.0.1:9332/tree
+[I 2024-05-08 23:52:57.114 ServerApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+[I 2024-05-08 23:52:57.229 ServerApp] Skipped non-installed server(s): bash-language-server, dockerfile-language-server-nodejs, javascript-typescript-langserver, jedi-language-server, julia-language-server, pyright, python-language-server, python-lsp-server, r-languageserver, sql-language-server, texlab, typescript-language-server, unified-language-server, vscode-css-languageserver-bin, vscode-html-languageserver-bin, vscode-json-languageserver-bin, yaml-language-server
+[I 2024-05-08 23:53:23.315 ServerApp] 302 GET / (@10.1.121.1) 1.32ms
+[I 2024-05-08 23:53:59.075 ServerApp] Creating new notebook in /HyenaDNA
+[I 2024-05-08 23:54:01.777 ServerApp] Saving file at /HyenaDNA/Untitled.ipynb
+[I 2024-05-08 23:54:01.836 ServerApp] Kernel started: 24b3ad00-6b02-4590-ad16-e7ee916ddd7b
+[I 2024-05-08 23:54:07.262 ServerApp] Connecting to kernel 24b3ad00-6b02-4590-ad16-e7ee916ddd7b.
+[I 2024-05-08 23:54:07.266 ServerApp] Connecting to kernel 24b3ad00-6b02-4590-ad16-e7ee916ddd7b.
+[I 2024-05-08 23:54:08.991 ServerApp] Connecting to kernel 24b3ad00-6b02-4590-ad16-e7ee916ddd7b.
+[I 2024-05-08 23:56:06.807 ServerApp] Saving file at /HyenaDNA/Untitled.ipynb
+[I 2024-05-08 23:59:03.652 ServerApp] Connecting to kernel 24b3ad00-6b02-4590-ad16-e7ee916ddd7b.
+[I 2024-05-09 00:00:07.806 ServerApp] Saving file at /HyenaDNA/Untitled.ipynb
+[I 2024-05-09 00:02:07.982 ServerApp] Saving file at /HyenaDNA/Untitled.ipynb
+[I 2024-05-09 00:03:55.693 ServerApp] Kernel interrupted: 24b3ad00-6b02-4590-ad16-e7ee916ddd7b
+[I 2024-05-09 00:04:09.490 ServerApp] Saving file at /HyenaDNA/Untitled.ipynb
+[I 2024-05-09 00:06:20.632 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 00:08:21.814 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 00:10:23.476 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 00:12:24.378 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 00:14:24.827 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 00:16:25.218 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 00:18:25.405 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 00:20:25.897 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 00:22:26.784 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 00:26:27.861 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 00:28:28.100 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 00:30:29.886 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 00:32:30.131 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 00:34:30.337 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 00:36:30.534 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 00:40:30.742 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 00:46:31.669 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 00:48:32.795 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 00:52:33.027 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[W 2024-05-09 00:53:25.340 ServerApp] 404 GET /api/contents/HyenaDNA/Untitled.ipynb?type=notebook&content=1&hash=1&1715230407818 (82472bccc7a0488ca083e36aafe3feec@10.1.121.1) 3.24ms referer=http://localhost:9332/notebooks/HyenaDNA/Untitled.ipynb
+[W 2024-05-09 00:53:25.340 ServerApp] 404 GET /api/contents/HyenaDNA/Untitled.ipynb?type=notebook&content=1&hash=1&1715230407818 (10.1.121.1): No such file or directory: HyenaDNA/Untitled.ipynb
+[I 2024-05-09 00:53:30.133 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 00:55:41.760 ServerApp] Kernel interrupted: 24b3ad00-6b02-4590-ad16-e7ee916ddd7b
+[I 2024-05-09 00:55:42.320 ServerApp] Kernel interrupted: 24b3ad00-6b02-4590-ad16-e7ee916ddd7b
+[I 2024-05-09 00:55:47.941 ServerApp] Kernel interrupted: 24b3ad00-6b02-4590-ad16-e7ee916ddd7b
+[I 2024-05-09 00:57:30.316 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 01:12:04.301 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 01:14:04.516 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 01:16:04.691 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 01:18:05.603 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 01:20:06.058 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 01:22:07.816 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 01:24:07.987 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 01:26:09.725 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 01:28:10.002 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 01:30:10.273 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 01:32:10.519 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 01:34:10.771 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 01:36:12.577 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 01:38:12.809 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 01:40:14.602 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 02:05:19.817 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 02:07:21.560 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 02:09:21.764 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 02:11:22.663 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 02:13:23.557 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 02:15:23.784 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 02:17:25.528 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 02:19:25.722 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[W 2024-05-09 02:19:37.263 ServerApp] WebSocket ping timeout after 119975 ms.
+[W 2024-05-09 02:19:37.929 ServerApp] 
+[W 2024-05-09 02:19:38.507 ServerApp] 
+[W 2024-05-09 02:19:39.083 ServerApp] 
+[W 2024-05-09 02:19:39.661 ServerApp] 
+[W 2024-05-09 02:19:40.240 ServerApp] 
+[W 2024-05-09 02:19:40.813 ServerApp] 
+[W 2024-05-09 02:19:41.394 ServerApp] 
+[W 2024-05-09 02:19:41.968 ServerApp] 
+[I 2024-05-09 02:21:25.972 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 02:23:26.238 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 02:23:30.181 ServerApp] Kernel interrupted: 24b3ad00-6b02-4590-ad16-e7ee916ddd7b
+[I 2024-05-09 02:25:27.115 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 02:27:27.298 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 02:27:35.141 ServerApp] Kernel interrupted: 24b3ad00-6b02-4590-ad16-e7ee916ddd7b
+[I 2024-05-09 02:29:27.804 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 02:30:09.730 ServerApp] Kernel interrupted: 24b3ad00-6b02-4590-ad16-e7ee916ddd7b
+[I 2024-05-09 02:30:30.212 ServerApp] Kernel interrupted: 24b3ad00-6b02-4590-ad16-e7ee916ddd7b
+[I 2024-05-09 02:31:12.685 ServerApp] Kernel interrupted: 24b3ad00-6b02-4590-ad16-e7ee916ddd7b
+[I 2024-05-09 02:31:29.596 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 02:33:31.386 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 02:35:33.092 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 02:37:33.793 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 02:39:33.991 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 02:41:14.415 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 02:41:47.737 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 02:43:49.474 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 02:45:04.955 ServerApp] Starting buffering for 24b3ad00-6b02-4590-ad16-e7ee916ddd7b:d359e682-a31c-48e8-a589-2c08c4c7465c
+[I 2024-05-09 13:12:54.780 ServerApp] 302 GET / (@10.1.121.1) 1.10ms
+[I 2024-05-09 13:12:58.114 ServerApp] Connecting to kernel 24b3ad00-6b02-4590-ad16-e7ee916ddd7b.
+[I 2024-05-09 13:12:58.116 ServerApp] Discarding 991 buffered messages for 24b3ad00-6b02-4590-ad16-e7ee916ddd7b:d359e682-a31c-48e8-a589-2c08c4c7465c
+[I 2024-05-09 13:13:00.313 ServerApp] Starting buffering for 24b3ad00-6b02-4590-ad16-e7ee916ddd7b:6a3a3049-1fa0-42ec-9a77-f70d2f6f7d5d
+[I 2024-05-09 13:13:14.119 ServerApp] Connecting to kernel 24b3ad00-6b02-4590-ad16-e7ee916ddd7b.
+[I 2024-05-09 13:13:14.345 ServerApp] Starting buffering for 24b3ad00-6b02-4590-ad16-e7ee916ddd7b:6da7ca11-a273-486b-b6b8-079e1581b59f
+[I 2024-05-09 13:13:16.223 ServerApp] Connecting to kernel 24b3ad00-6b02-4590-ad16-e7ee916ddd7b.
+[I 2024-05-09 13:15:15.942 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 13:17:16.718 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 13:19:16.818 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 13:21:17.599 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 13:23:17.695 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 13:25:17.831 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 13:27:17.988 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 13:29:18.167 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 13:31:18.896 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 13:35:14.086 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 13:45:45.405 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 13:51:56.104 ServerApp] Kernel restarted: 24b3ad00-6b02-4590-ad16-e7ee916ddd7b
+[I 2024-05-09 13:51:56.115 ServerApp] Starting buffering for 24b3ad00-6b02-4590-ad16-e7ee916ddd7b:2e6477ae-edb0-45f2-a1fa-af251fa15fd9
+[I 2024-05-09 13:51:56.129 ServerApp] Connecting to kernel 24b3ad00-6b02-4590-ad16-e7ee916ddd7b.
+[I 2024-05-09 13:51:56.129 ServerApp] Restoring connection for 24b3ad00-6b02-4590-ad16-e7ee916ddd7b:2e6477ae-edb0-45f2-a1fa-af251fa15fd9
+[I 2024-05-09 15:30:12.460 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 15:32:13.470 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 15:34:16.507 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 15:36:21.117 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 15:38:21.691 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 15:40:22.463 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 15:42:27.037 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 15:44:28.811 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 15:46:30.896 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[W 2024-05-09 15:47:56.129 ServerApp] WebSocket ping timeout after 119007 ms.
+[W 2024-05-09 15:47:56.389 ServerApp] 
+[W 2024-05-09 15:47:56.959 ServerApp] 
+[W 2024-05-09 15:47:58.142 ServerApp] 
+[W 2024-05-09 15:47:58.725 ServerApp] 
+[W 2024-05-09 15:47:59.305 ServerApp] 
+[W 2024-05-09 15:47:59.874 ServerApp] 
+[W 2024-05-09 15:48:00.449 ServerApp] 
+[W 2024-05-09 15:48:01.021 ServerApp] 
+[I 2024-05-09 15:48:01.131 ServerApp] Starting buffering for 24b3ad00-6b02-4590-ad16-e7ee916ddd7b:2e6477ae-edb0-45f2-a1fa-af251fa15fd9
+[I 2024-05-09 17:07:56.296 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 18:59:27.733 ServerApp] Kernel interrupted: 24b3ad00-6b02-4590-ad16-e7ee916ddd7b
+[I 2024-05-09 19:00:48.442 ServerApp] Kernel interrupted: 24b3ad00-6b02-4590-ad16-e7ee916ddd7b
+[I 2024-05-09 19:01:09.998 ServerApp] Connecting to kernel 24b3ad00-6b02-4590-ad16-e7ee916ddd7b.
+[I 2024-05-09 19:01:09.998 ServerApp] Restoring connection for 24b3ad00-6b02-4590-ad16-e7ee916ddd7b:2e6477ae-edb0-45f2-a1fa-af251fa15fd9
+[I 2024-05-09 19:01:10.028 ServerApp] Replaying 5162 buffered messages
+[W 2024-05-09 19:01:10.500 ServerApp] IOPub message rate exceeded.
+    The Jupyter server will temporarily stop sending output
+    to the client in order to avoid crashing it.
+    To change this limit, set the config variable
+    `--ServerApp.iopub_msg_rate_limit`.
+    
+    Current values:
+    ServerApp.iopub_msg_rate_limit=1000.0 (msgs/sec)
+    ServerApp.rate_limit_window=3.0 (secs)
+    
+[I 2024-05-09 19:01:25.097 ServerApp] Kernel restarted: 24b3ad00-6b02-4590-ad16-e7ee916ddd7b
+[I 2024-05-09 19:01:25.148 ServerApp] Starting buffering for 24b3ad00-6b02-4590-ad16-e7ee916ddd7b:2e6477ae-edb0-45f2-a1fa-af251fa15fd9
+[I 2024-05-09 19:01:25.207 ServerApp] Connecting to kernel 24b3ad00-6b02-4590-ad16-e7ee916ddd7b.
+[I 2024-05-09 19:01:25.207 ServerApp] Restoring connection for 24b3ad00-6b02-4590-ad16-e7ee916ddd7b:2e6477ae-edb0-45f2-a1fa-af251fa15fd9
+[W 2024-05-09 19:01:30.745 ServerApp] Nudge: attempt 10 on kernel 24b3ad00-6b02-4590-ad16-e7ee916ddd7b
+[I 2024-05-09 19:01:54.979 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 19:03:56.719 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 19:05:57.175 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 19:07:58.883 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 19:09:59.106 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[I 2024-05-09 19:12:00.856 ServerApp] Saving file at /HyenaDNA/hyenaDNA_deepstarr.ipynb
+[W 2024-05-09 19:37:55.208 ServerApp] WebSocket ping timeout after 119994 ms.
+[W 2024-05-09 19:37:57.231 ServerApp] Replacing stale connection: 24b3ad00-6b02-4590-ad16-e7ee916ddd7b:2e6477ae-edb0-45f2-a1fa-af251fa15fd9
+[I 2024-05-09 19:37:57.234 ServerApp] Connecting to kernel 24b3ad00-6b02-4590-ad16-e7ee916ddd7b.
+[W 2024-05-09 19:37:57.260 ServerApp] 
+[W 2024-05-09 19:37:57.264 ServerApp] 
+[W 2024-05-09 19:37:57.269 ServerApp] 
+[W 2024-05-09 19:37:57.274 ServerApp] 
+[W 2024-05-09 19:37:57.286 ServerApp] 
+[W 2024-05-09 19:37:57.290 ServerApp] 
+[I 2024-05-09 19:57:51.990 ServerApp] Starting buffering for 24b3ad00-6b02-4590-ad16-e7ee916ddd7b:2e6477ae-edb0-45f2-a1fa-af251fa15fd9
+slurmstepd: error: *** JOB 4113167 ON compute-4-13 CANCELLED AT 2024-05-10T23:52:30 DUE TO TIME LIMIT ***

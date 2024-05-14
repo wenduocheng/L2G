@@ -10,20 +10,20 @@ hyperparameters:
     maxsamples: 256 #512
     target_seq_len: 128 #256 #512
 
-    experiment_id: 14 
+    experiment_id: 15 
 
     seed: 0
-    epochs: 30 #25
+    epochs: 25 #25
     embedder_epochs: 100 
-    pretrain_epochs: 0 
+    pretrain_epochs: 60 
     predictor_epochs: 0 
 
     joint_optim: True
-    alpha: 0.01 # weight for otdd 
+    alpha: 1 # weight for otdd 
     beta: 1 # weight for bce
     finetune_method: all
     one_hot: True
-
+    run_dash: True
     lora_r: 12 # 12
     lora_alpha: 32 # 32
     lora_dropout: 0.1
@@ -41,7 +41,7 @@ hyperparameters:
     quantize: False
 
     embedder_type: "resnet" # dash, unet,dash random
-    embedder_init: "pretrained"
+    embedder_init: "random"
     ks: [3, 5, 3, 3, 3, 5, 5, 7, 5] 
     ds: [1, 1, 1, 1, 5, 1, 1, 1, 1]
     emedder_path: "/home/wenduoc/DASH/src/results_acc/H3K4me3/wrn/wrn/1/network_weights.pt"
@@ -73,7 +73,7 @@ hyperparameters:
         name: WarmupLR
         params:
             warmup_epochs: 5
-            decay_epochs: 30
+            decay_epochs: 25
             sched: [30, 60, 90]
             base: 0.2
 

@@ -1,8 +1,9 @@
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torchvision.transforms as transforms
+# import torch.nn.functional as F
+# import torchvision.transforms as transforms
+import math
 from torch.utils.data import Dataset, IterableDataset, DataLoader
 from timeit import default_timer
 from functools import partial
@@ -44,7 +45,7 @@ def otdd(feats, ys=None, src_train_dataset=None, exact=True):
 
 
 class wrapper1D(torch.nn.Module):
-    def __init__(self, input_shape, output_shape, use_embedder=True, weight='roberta', train_epoch=0, activation=None, target_seq_len=512, drop_out=None, from_scratch=False, args=None):
+    def __init__(self, input_shape, output_shape, use_embedder=True, weight='roberta', train_epoch=0, activation=None, target_seq_len=512, drop_out=None, from_scratch=False, args=None, root=None):
         super().__init__()
 
         self.dense = False
@@ -166,7 +167,7 @@ class wrapper1D(torch.nn.Module):
                 source = self.model.embed_tokens
             elif weight == 'roberta' or weight == 'roberta-large': # roberta base
                 source = self.model.embeddings
-            self.embedder = Embeddings1D(input_shape, config=self.model.config if weight != 'hyenadna-small-32k-seqlen' else None, embed_dim=embed_dim, target_seq_len=target_seq_len, dense=self.dense, args=args, output_shape=output_shape)
+            self.embedder = Embeddings1D(input_shape, config=self.model.config if weight != 'hyenadna-small-32k-seqlen' else None, embed_dim=embed_dim, target_seq_len=target_seq_len, dense=self.dense, args=args, output_shape=output_shape,root=root)
             embedder_init(source=source, target=self.embedder, train_embedder=train_epoch > 0, args=args)
             set_grad_state(self.embedder, True)    
         else:
@@ -297,7 +298,7 @@ class wrapper1D(torch.nn.Module):
 
 
 class Embeddings1D(nn.Module):
-    def __init__(self, input_shape, embed_dim=768, target_seq_len=64, config=None, dense=False, args=None, output_shape=None):
+    def __init__(self, input_shape, embed_dim=768, target_seq_len=64, config=None, dense=False, args=None, output_shape=None, root=None):
         super().__init__()
         self.dense = dense
         self.embed_dim = embed_dim
@@ -312,93 +313,132 @@ class Embeddings1D(nn.Module):
         self.embedder_type = args.embedder_type if args is not None else None
         self.one_hot = args.one_hot if args is not None else False
 
-        if self.embedder_type is None or self.embedder_type == 'random':
-            self.projection = nn.Conv1d(input_shape[1], embed_dim, kernel_size=self.stack_num, stride=self.stack_num)
-            conv_init(self.projection)
-        elif self.embedder_type == 'deepsea':
-            self.projection = torch.nn.Sequential(
-            nn.Conv1d(in_channels=4, out_channels=320, kernel_size=8, padding=4),
-            torch.nn.ReLU(inplace=False),
-            nn.MaxPool1d(kernel_size=4, stride=4),
-
-            nn.Conv1d(in_channels=320, out_channels=480, kernel_size=8, padding=4),
-            torch.nn.ReLU(inplace=False),
-            nn.MaxPool1d(kernel_size=4, stride=4),
-
-            nn.Conv1d(in_channels=480, out_channels=960, kernel_size=8, padding=4),
-            torch.nn.ReLU(inplace=False),
-            
-            nn.Conv1d(in_channels=960, out_channels=768, kernel_size=8, padding=4)
-            )
-        elif self.embedder_type == 'resnet':
+        
+        if not args.run_dash: # if not using dash, use default ResNet architecture
             in_channel=input_shape[-2]
-   
             num_classes=output_shape
             mid_channels=min(4 ** (num_classes // 10 + 1), 64)
             dropout=0
-            if args.run_dash:
-                dash_result_path = f"./dash_results/{args.dataset}/wrn/wrn/{args.seed}/dash_final_results.npy"
-                if not os.path.exists(dash_result_path):
-                    print('Start to run DASH!')
-                    subprocess.run(f"python -W ignore ./DASH/main.py --dataset {args.dataset} --arch wrn --experiment_id wrn --seed {args.seed} --valid_split 0", shell=True, check=True)
-                    print('DASH Finish!')
-                else:
-                    print('Found existing DASH results!')
-                # Load the results file
-                
-                dash_results = np.load(dash_result_path,allow_pickle=True).item()
-                print(type(dash_results))
-                print(dash_results)
-                ks = dash_results['ks']
-                ds = dash_results['ds']
-                dropout = dash_results['drop out']
-                args.embedder_optimizer.params.lr = dash_results['lr']
-                args.embedder_optimizer.params.weight_decay = dash_results['weight decay']
-                args.embedder_optimizer.params.momentum = dash_results['momentum']
-                print('DASH result:', dash_results['test best score'])
-                
-            else:
-                try:
-                    ks=args.ks 
-                    ds=args.ds
-                except: # use default kernel sizes and dilation sizes
-                    ks=[15, 19, 19, 7, 7, 7, 19, 19, 19]
-                    ds=[1, 15, 15, 1, 1, 1, 15, 15, 15]
+            try:
+                ks=args.ks 
+                ds=args.ds
+            except: # use default kernel sizes and dilation sizes
+                ks=[15, 19, 19, 7, 7, 7, 19, 19, 19]
+                ds=[1, 15, 15, 1, 1, 1, 15, 15, 15]
             activation=None
             remain_shape=False
-            self.dash = ResNet1D_v3(in_channels = in_channel, mid_channels=mid_channels, num_pred_classes=num_classes, dropout_rate=dropout, ks = ks, ds = ds, activation=activation, remain_shape=remain_shape, input_shape=input_shape, embed_dim=embed_dim)
-            # self.dash = ResNet1D_v2(in_channels = in_channel, mid_channels=mid_channels, num_pred_classes=num_classes, dropout_rate=dropout, ks = ks, ds = ds, activation=activation, remain_shape=remain_shape, input_shape=input_shape, embed_dim=embed_dim,target_seq_len=target_seq_len)
-            # self.dash = ResNet1D(in_channels = in_channel, mid_channels=mid_channels, num_pred_classes=num_classes, dropout_rate=dropout, ks = ks, ds = ds, activation=activation, remain_shape=remain_shape)
-        elif self.embedder_type == 'unet' or self.embedder_type=='unet-dash':
-            self.projection = nn.Conv1d(128, embed_dim, kernel_size=self.stack_num, stride=self.stack_num) 
-            downsample = False
-            # if input_shape[-1] >= 1000:
-            #     # self.projection = nn.Conv1d(128, embed_dim, kernel_size=1, stride=1) 
-            #     # downsample = True
-            #     # print('Downsample!')
-            #     self.projection = nn.Conv1d(128, embed_dim, kernel_size=self.stack_num, stride=self.stack_num) 
-            #     downsample = False
-            # else:
-            #     self.projection = nn.Conv1d(128, embed_dim, kernel_size=self.stack_num, stride=self.stack_num) 
-            #     downsample = False
-            conv_init(self.projection)
-            if self.embedder_type == 'unet':
-                if not args.one_hot: # if not one hot encode
-                    print(input_shape)
-                    channels = args.channels if hasattr(args,'channels') else [16,32,64]# [16, 16, 16, 32, 64, 64]
-                    self.fno = Encoder_v2(embed_dim, channels = channels, dropout=args.drop_out, f_channel=input_shape[-1],num_class=output_shape,ks=None,ds=None,downsample=downsample,seqlen=input_shape[-1]) #ResNet1D(4,128,36,ks=[15,13,11,9,7,5,5,3,3],ds=[32,16,8,4,4,2,2,1,1])# FNO1d()
-                else: # one hot encoding + no dna embedding
-                    print('input shape:',input_shape)
-                    self.fno = Encoder_v2(input_shape[1],channels=[16,32,64],dropout=args.drop_out,f_channel=input_shape[-1],num_class=output_shape,ks=None,ds=None,downsample=downsample,seqlen=input_shape[-1]) 
-            elif self.embedder_type == 'unet-dash':
-                self.fno = Encoder_v2(128,f_channel=input_shape[-1],num_class=output_shape,ks=args.ks,ds=args.ds,downsample=downsample) 
-            self.dnaemb=nn.Embedding(5,embed_dim)#embed_dim) #16)
+            self.dash = ResNet1D_v3(in_channels = in_channel, mid_channels=mid_channels, num_pred_classes=num_classes, dropout_rate=dropout, ks = [15, 19, 19, 7, 7, 7, 19, 19, 19], ds = [1, 15, 15, 1, 1, 1, 15, 15, 15], activation=activation, remain_shape=remain_shape, input_shape=input_shape, embed_dim=embed_dim)
+        else: # run_dash = True
+            print('Backbone selection')
+            # backbone zoo: resnet, unet
+            backbone_select = args.backbone_select if hasattr(args,'backbone_select') else True
+            if backbone_select: 
+                # data
+                train_loader, val_loader, _, n_train, _, _, data_kwargs = get_data(root, args.dataset, args.batch_size, args.valid_split, quantize=args.quantize if hasattr(args, 'quantize') else False, rc_aug=args.rc_aug if hasattr(args, 'rc_aug') else False, shift_aug=args.shift_aug if hasattr(args, 'shift_aug') else False, one_hot=args.one_hot if hasattr(args, 'one_hot') else True)
+                # loss
+                _, _, _, loss, _ = get_config(root, args)
+                # metric
+                metric, _ = get_metric(root, args.dataset)
+                
+                # resnet
+                in_channel=input_shape[-2]
+                num_classes=output_shape
+                mid_channels=min(4 ** (num_classes // 10 + 1), 64)
+                model = ResNet1D_v3(in_channels = in_channel, mid_channels=mid_channels, num_pred_classes=num_classes, dropout_rate=dropout, ks = ks, ds = ds, activation=activation, remain_shape=remain_shape, input_shape=input_shape, embed_dim=embed_dim).to(args.device)
+                # optimizer
+                optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0005)
+                # scheduler
+                base, accum = 0.2, 1
+                sched = [30, 60, 90, 120, 160]
+                def weight_sched_train(epoch):    
+                    optim_factor = 0
+                    for i in range(len(sched)):
+                        if epoch > sched[len(sched) - 1 - i]:
+                            optim_factor = len(sched) - i
+                            break
+                    return math.pow(base, optim_factor)
+                scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda = weight_sched_train)
 
-            print(self.dnaemb.weight.data)
-            #self.dnaemb.weight.data.uniform_(-1.0 / 1024, 1.0 / 1024)
-            nn.init.normal_(self.dnaemb.weight, std=0.02)
-            print(self.dnaemb.weight.data)
-            self.fno.apply(conv_init)
+                train_loss_1 = train_one_epoch3(args, model, optimizer, train_loader, loss, n_train)
+                val_loss_1, val_score_1 = evaluate3(args, model, val_loader, loss, metric)
+                print("[backbone ", "resnet", "\ttrain loss:", "%.4f" % train_loss_1, "\tval loss:", "%.4f" % val_loss_1, "\tval score:", "%.4f" % val_score_1)
+                del model, optimizer, scheduler
+
+                # unet
+                channels= args.channels if hasattr(args,'channels') else [16,32,64]
+                model = Encoder_v2(input_shape[1],channels=channels,dropout=args.drop_out,f_channel=input_shape[-1],num_class=output_shape,ks=None,ds=None,downsample=downsample,seqlen=input_shape[-1]).to(args.device)
+                optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0005)
+                scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda = weight_sched_train)
+                train_loss_2 = train_one_epoch3(args, model, optimizer, train_loader, loss, n_train)
+                val_loss_2, val_score_2 = evaluate3(args, model, val_loader, loss, metric)
+                print("[backbone ", "resnet", "\ttrain loss:", "%.4f" % train_loss_2, "\tval loss:", "%.4f" % val_loss_2, "\tval score:", "%.4f" % val_score_2)
+                del train_loader, val_loader
+                del model, optimizer, scheduler
+                if val_score_1 > val_score_2:
+                    self.embedder_type = 'resnet' 
+                else:
+                    self.embedder_type = 'unet'
+                print('Backbone selection: ', self.embedder_type)
+                
+
+            # optimization
+            if self.embedder_type == 'resnet':
+                in_channel=input_shape[-2]
+    
+                num_classes=output_shape
+                mid_channels=min(4 ** (num_classes // 10 + 1), 64)
+                dropout=0
+                if args.run_dash:
+                    dash_result_path = f"./dash_results/{args.dataset}/wrn/wrn/{args.seed}/dash_final_results.npy"
+                    if not os.path.exists(dash_result_path):
+                        print('Start to run DASH!')
+                        subprocess.run(f"python -W ignore ./DASH/main.py --dataset {args.dataset} --arch wrn --experiment_id wrn --seed {args.seed} --valid_split 0", shell=True, check=True)
+                        print('DASH Finish!')
+                    else:
+                        print('Found existing DASH results!')
+                    # Load the results file
+                    
+                    dash_results = np.load(dash_result_path,allow_pickle=True).item()
+                    print(type(dash_results))
+                    print(dash_results)
+                    ks = dash_results['ks']
+                    ds = dash_results['ds']
+                    dropout = dash_results['drop out']
+                    args.embedder_optimizer.params.lr = dash_results['lr']
+                    args.embedder_optimizer.params.weight_decay = dash_results['weight decay']
+                    args.embedder_optimizer.params.momentum = dash_results['momentum']
+                    print('DASH result:', dash_results['test best score'])
+                    
+                else:
+                    ks = args.ks if hasattr(args,'ks') else [15, 19, 19, 7, 7, 7, 19, 19, 19]
+                    ds = args.ds if hasattr(args,'ds') else [1, 15, 15, 1, 1, 1, 15, 15, 15]
+                activation=None
+                remain_shape=False
+                self.dash = ResNet1D_v3(in_channels = in_channel, mid_channels=mid_channels, num_pred_classes=num_classes, dropout_rate=dropout, ks = ks, ds = ds, activation=activation, remain_shape=remain_shape, input_shape=input_shape, embed_dim=embed_dim)
+                # self.dash = ResNet1D_v2(in_channels = in_channel, mid_channels=mid_channels, num_pred_classes=num_classes, dropout_rate=dropout, ks = ks, ds = ds, activation=activation, remain_shape=remain_shape, input_shape=input_shape, embed_dim=embed_dim,target_seq_len=target_seq_len)
+            elif self.embedder_type == 'unet' or self.embedder_type=='unet-dash':
+                self.projection = nn.Conv1d(128, embed_dim, kernel_size=self.stack_num, stride=self.stack_num) 
+                downsample = False
+                conv_init(self.projection)
+                if self.embedder_type == 'unet':
+                #     if not args.one_hot: # if not one hot encode
+                #         print(input_shape)
+                #         channels = args.channels if hasattr(args,'channels') else [16,32,64]# [16, 16, 16, 32, 64, 64]
+                #         self.fno = Encoder_v2(embed_dim, channels = channels, dropout=args.drop_out, f_channel=input_shape[-1],num_class=output_shape,ks=None,ds=None,downsample=downsample,seqlen=input_shape[-1]) #ResNet1D(4,128,36,ks=[15,13,11,9,7,5,5,3,3],ds=[32,16,8,4,4,2,2,1,1])# FNO1d()
+                #     else: # one hot encoding + no dna embedding
+                #     print('input shape:',input_shape)
+                    channels= args.channels if hasattr(args,'channels') else [16,32,64]
+                    self.fno = Encoder_v2(input_shape[1],channels=channels,dropout=args.drop_out,f_channel=input_shape[-1],num_class=output_shape,ks=None,ds=None,downsample=downsample,seqlen=input_shape[-1]) 
+                # elif self.embedder_type == 'unet-dash':
+                    # channels=[16,32,64]
+                    # self.fno = Encoder_v2(128,f_channel=input_shape[-1],num_class=output_shape,ks=args.ks,ds=args.ds,downsample=downsample) 
+                # self.dnaemb=nn.Embedding(5,embed_dim) #embed_dim) #16)
+
+                # print(self.dnaemb.weight.data)
+                # nn.init.normal_(self.dnaemb.weight, std=0.02)
+                # print(self.dnaemb.weight.data)
+
+                self.fno.apply(conv_init)
 
     def get_stack_num(self, input_len, target_seq_len):
         if self.embed_dim == 768 or self.embed_dim == 1024: # 
@@ -416,26 +456,15 @@ class Embeddings1D(nn.Module):
     def forward(self, x=None, inputs_embeds=None, position_ids=None, *args, **kwargs): # 
         if x is None:
             x = inputs_embeds
-        b, c, l = x.shape # batch size, channel, length   e.g. human_enhancers_cohn (64,1,500) if not one hot encoded
+        # b, c, l = x.shape # batch size, channel, length   e.g., human_enhancers_cohn (64,5,500) if one hot encoded
 
-        # if self.embedder_type == 'unet' and (not self.one_hot):   # or self.embedder_type=='unet-dash'
-        #     # not one hot encoding
-        #     x = self.dnaemb(x.transpose(1,2).reshape(-1,c).long()) # x: (64,1,500) -->transpose (64,500,1) -->reshape(32000,1) --> dnaembed (32000, 1, 1024) 
-        #     x = x.squeeze(1).reshape(b,l,-1).transpose(1,2) # x: (64,1024,500)
-            
-        #     xfno, x = self.fno(x, return_embeddings=True) # x: (64,128,500)
-        #     x = self.projection(x) #  x: (64,1024,100)
-        # elif self.embedder_type == 'unet' and self.one_hot:
-        #     # print('397',x.shape)
-        #     xfno, x = self.fno(x, return_embeddings=True) # x: (64,128,500)
-        #     x = self.projection(x) 
-        # # # elif self.embedder_type == 'random' or None: # conv1d
-        # # #     x = self.projection(x)
-        # # #     # xfno = self.flatten(x)
-        # # #     # xfno = self.linear(xfno)
-        if self.embedder_type == 'resnet': # dash resnet
+        if self.embedder_type == 'unet':
+            xfno, x = self.fno(x, return_embeddings=True) # x: (64,128,500)
+            x = self.projection(x) 
+ 
+        elif self.embedder_type == 'resnet': # dash resnet
             xfno,x = self.dash(x, return_embeddings=True)
-        # print('393',x.shape,xfno.shape)
+
         x = x.transpose(1, 2)
         x = self.norm(x)
         
@@ -444,13 +473,6 @@ class Embeddings1D(nn.Module):
         # self.ps = self.position_embeddings(position_ids)
         # x = x + self.ps
         
-        
-        # if self.joint_optim:
-        #     # print('388',x.size())
-        #     return x, xfno
-        # else:
-        #     return 
-        #print(xfno,xfno.argmax(-1))
         return x, xfno
 
 
@@ -553,7 +575,7 @@ def get_tgt_model(args, root, sample_shape, num_classes, loss, add_loss=False, u
   
     wrapper_func = wrapper1D 
    
-    tgt_model = wrapper_func(sample_shape, num_classes, weight=args.weight, train_epoch=args.embedder_epochs, activation=args.activation, target_seq_len=args.target_seq_len, drop_out=args.drop_out, from_scratch=False, args=args)
+    tgt_model = wrapper_func(sample_shape, num_classes, weight=args.weight, train_epoch=args.embedder_epochs, activation=args.activation, target_seq_len=args.target_seq_len, drop_out=args.drop_out, from_scratch=False, args=args, root= root)
     if hasattr(args, 'data_parallel') and args.data_parallel:
         tgt_model = nn.DataParallel(tgt_model) 
     if hasattr(args, 'quantize') and args.quantize:
@@ -970,3 +992,63 @@ def evaluate_embedder(args, model, loader, loss, metric):
         eval_score += metric(outs, ys).item()
 
     return eval_loss, eval_score
+
+
+def evaluate3(args,model, loader, loss, metric):
+    model.eval()
+    
+    eval_loss, eval_score = 0, 0
+
+    ys, outs, n_eval, n_data = [], [], 0, 0
+
+    with torch.no_grad():
+        for i, data in enumerate(loader):
+            x, y = data
+                                
+            x, y = x.to(args.device), y.to(args.device) 
+
+            out = model(x)
+
+            outs.append(out) 
+            ys.append(y) 
+            n_data += x.shape[0]
+        
+        
+        outs = torch.cat(outs, 0)
+        ys = torch.cat(ys, 0)
+
+        eval_loss += loss(outs, ys).item()
+
+        eval_score += metric(outs, ys).item()
+
+    return eval_loss, eval_score
+
+def train_one_epoch3(args,model, optimizer, loader, loss, temp):    
+
+    model.train()
+                    
+    train_loss = 0
+    optimizer.zero_grad()
+
+    for i, data in enumerate(loader):
+
+        x, y = data 
+        
+        x, y = x.to(args.device), y.to(args.device)
+        out = model(x)
+
+        l = loss(out, y)
+        l.backward()
+
+        # torch.nn.utils.clip_grad_norm_(model.parameters(), 1)
+       
+        optimizer.step()
+        optimizer.zero_grad()
+        
+
+        train_loss += l.item()
+
+        if i >= temp - 1:
+            break
+
+    return train_loss / temp

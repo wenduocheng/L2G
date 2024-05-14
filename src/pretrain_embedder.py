@@ -9,15 +9,18 @@ import torch.backends.cudnn as cudnn
 import torch.nn.functional as F
 from timeit import default_timer
 from sklearn import metrics
-from vq import Encoder_v2, Encoder_v3
+from networks.vq import Encoder_v2, Encoder_v3
 # from task_configs import get_data
 # from utils import calculate_auroc, calculate_aupr, auroc, inverse_score
 # from utils import auroc_aupr,inverse_two_scores #
-from wrn1d import ResNet1D, ResNet1D_v2, ResNet1D_v3 # 
+from networks.wrn1d import ResNet1D, ResNet1D_v2, ResNet1D_v3 # 
 import copy
 import scipy
 
-torch.cuda.set_device(3)
+from helper_scripts.genomic_benchmarks_utils import GenomicBenchmarkDataset, CharacterTokenizer, combine_datasets, NucleotideTransformerDataset 
+from torch.utils.data import DataLoader
+
+# torch.cuda.set_device(3)
 print(torch.cuda.is_available())
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 print("device:", DEVICE)
@@ -25,14 +28,14 @@ print("device:", DEVICE)
 
 
 #-----------------------Configurations
-configs = {'weight':'resnet', # resnet, unet, nas-deepsea ,
-           'dataset':'H3K4me1', # DEEPSEA_FULL
+configs = {'weight':'unet', # resnet, unet, nas-deepsea ,
+           'dataset':'splice_sites_acceptors', # DEEPSEA_FULL
            'one_hot':True,
-           'lr':0.01,
+           'lr':0.001,
            'optimizer': 'SGD',
-           'weight_decay': 0.0005,
+           'weight_decay': 0.00005,
            'momentum':0.99,
-           'batch_size':64,
+           'batch_size':128,
            'epochs':80,
             'channels': [16,32,64],
             'drop_out':0.05,
@@ -41,7 +44,7 @@ configs = {'weight':'resnet', # resnet, unet, nas-deepsea ,
 print(configs)
 # weight: nas-deepsea, one_hot True, lr 0,01
 
-root = "/home/wenduoc/ORCA/clean/gene-orca/datasets"
+root = "/home/wenduoc/ORCA/L2G/src/datasets"
 
 #--------------------------Metric
 def mcc(output, target):
@@ -236,8 +239,7 @@ def get_data(root, dataset, batch_size, valid_split, maxsize=None, get_shape=Fal
 
     return train_loader, val_loader, test_loader, n_train, n_val, n_test, data_kwargs
 
-from genomic_benchmarks_utils import GenomicBenchmarkDataset, CharacterTokenizer, combine_datasets, NucleotideTransformerDataset 
-from torch.utils.data import DataLoader
+
 def load_nucleotide_transformer(root, batch_size, one_hot = True, valid_split=-1, dataset_name = 'enhancers', quantize=False, rc_aug = False, shift_aug=False):
     # Define a dictionary mapping dataset names to max_length
     max_length_dict = {
@@ -504,6 +506,9 @@ elif configs['weight']=='resnet':
     in_channel=5
     mid_channels=min(4 ** (num_classes // 10 + 1), 64)
     dropout=configs['drop_out']
+
+    ks = [3, 3, 5, 3, 3, 5, 3, 9, 11]
+    ds= [1, 1, 1, 1, 1, 1, 1, 1, 1]
     if configs['dataset']=='DEEPSEA' or configs['dataset']=='DEEPSEA_FULL':
         ks=[15, 19, 19, 7, 7, 7, 19, 19, 19]
         ds=[1, 15, 15, 1, 1, 1, 15, 15, 15]
@@ -646,15 +651,15 @@ for ep in range(configs['epochs']):
     
     print("[train", "full", ep, "%.6f" % optimizer.param_groups[0]['lr'], "] time elapsed:", "%.4f" % (train_time[-1]), "\ttrain loss:", "%.4f" % train_loss, "\tval loss:", "%.4f" % val_loss, "\tval score:", "%.4f" % val_score, "\tbest val score:", "%.4f" % np.min(train_score))
     
-    if np.min(train_score) == val_score:
-        # torch.save({'model_state_dict':model.state_dict(),
-        #           'optimizer_state_dict':optimizer.state_dict(),
-        #           'scheduler_state_dict':scheduler.state_dict(),
-        #           'val_score': val_score, 
-        #           'epoch': ep}, os.path.join('/home/wenduoc/ORCA/clean/gene-orca/pretrained_embedders', configs['dataset'] + '_pretrained_model.pth'))
-        torch.save(model.state_dict(), os.path.join('/home/wenduoc/ORCA/clean/gene-orca/pretrained_embedders', configs['dataset'] + '_pretrained_model.pth'))
-    if ep in [19,39,59,79,99]:
-        torch.save(model.state_dict(), os.path.join('/home/wenduoc/ORCA/clean/gene-orca/pretrained_embedders', configs['dataset']+'_' + str(ep+1)+ '_pretrained_model.pth'))
+    # if np.min(train_score) == val_score:
+    #     # torch.save({'model_state_dict':model.state_dict(),
+    #     #           'optimizer_state_dict':optimizer.state_dict(),
+    #     #           'scheduler_state_dict':scheduler.state_dict(),
+    #     #           'val_score': val_score, 
+    #     #           'epoch': ep}, os.path.join('/home/wenduoc/ORCA/clean/gene-orca/pretrained_embedders', configs['dataset'] + '_pretrained_model.pth'))
+    #     torch.save(model.state_dict(), os.path.join('./pretrained_embedders', configs['dataset'] + '_pretrained_model.pth'))
+    # if ep in [19,39,59,79,99]:
+    #     torch.save(model.state_dict(), os.path.join('./pretrained_embedders', configs['dataset']+'_' + str(ep+1)+ '_pretrained_model.pth'))
 
 # np.save(os.path.join('/home/wenduoc/automation/automation/deepsea/', 'train_losses.npy'), train_losses)
 # np.save(os.path.join('/home/wenduoc/automation/automation/deepsea/', 'train_score.npy'), train_score)    

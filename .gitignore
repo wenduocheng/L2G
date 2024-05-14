@@ -11,6 +11,7 @@ src/__pycache__
 wandb
 logs
 try*
+HyenaDNA
 *.sh
 *.log
 *.err

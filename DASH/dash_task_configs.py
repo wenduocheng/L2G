@@ -25,7 +25,7 @@ from networks.vq import Encoder
 # from sklearn import metrics
 import sys 
 sys.path.append('./')
-from src.data_loaders import load_deepsea_full, load_genomic_benchmarks, load_nucleotide_transformer # 
+from src.data_loaders import load_deepsea, load_deepsea_full, load_genomic_benchmarks, load_nucleotide_transformer, load_deepstarr # 
 # import customized optimizers
 # from optimizers import ExpGrad
 
@@ -43,7 +43,8 @@ def get_data(dataset, batch_size, arch, valid_split, one_hot=True):
         train_loader, val_loader, test_loader = load_deepsea(root, batch_size,one_hot = one_hot, valid_split=valid_split,quantize=False,rc_aug=False, shift_aug=False)
     elif dataset == "DEEPSEA_FULL":
         train_loader, val_loader, test_loader = load_deepsea_full(root, batch_size, one_hot = one_hot,valid_split=valid_split,quantize=False,rc_aug=False, shift_aug=False)
-
+    elif dataset == "deepstarr":
+        train_loader, val_loader, test_loader = load_deepstarr(root, batch_size,one_hot = one_hot, valid_split=valid_split, quantize=False, rc_aug=True, shift_aug=False)
     # elif dataset in ["dummy_mouse_enhancers_ensembl", "demo_coding_vs_intergenomic_seqs", "demo_human_or_worm", "human_enhancers_cohn", "human_enhancers_ensembl", "human_ensembl_regulatory", "human_nontata_promoters", "human_ocr_ensembl"]: 
     #     train_loader, val_loader, test_loader = load_genomic_benchmarks(batch_size, one_hot = True, valid_split=valid_split, dataset_name = dataset)
     #     # train_loader, val_loader, test_loader = load_genomic_benchmarks(batch_size, one_hot = False, valid_split=valid_split, dataset_name = dataset)
@@ -186,6 +187,7 @@ def get_config(dataset):
 
         if dataset == "dummy_mouse_enhancers_ensembl":
             # dims, sample_shape, num_classes = 1, (1, 9, 4710), 2
+            batch_size = 128
             dims, sample_shape, num_classes = 1, (1, 5, 4707), 2
             # dims, sample_shape, num_classes = 1, (1, 1, 4707), 2
         elif dataset == "demo_coding_vs_intergenomic_seqs":
@@ -224,9 +226,9 @@ def get_config(dataset):
         batch_size = 256 # 64
         arch_default = 'wrn'
         # arch_default = 'unet'
-        if dataset == "enhancer":
+        if dataset == "enhancers":
             dims, sample_shape, num_classes = 1, (1, 5, 200), 2
-        elif dataset == "enhancer_types":
+        elif dataset == "enhancers_types":
             dims, sample_shape, num_classes = 1, (1, 5, 200), 3
         elif dataset in ['H3', 'H3K4me1', 'H3K4me2', 'H3K4me3', 'H3K9ac', 'H3K14ac', 'H3K36me3', 'H3K79me3', 'H4', 'H4ac']:
             dims, sample_shape, num_classes = 1, (1, 5, 500), 2
@@ -255,6 +257,14 @@ def get_config(dataset):
         arch_default = 'wrn'  
         config_kwargs['grad_scale'] = 10
 
+    elif dataset == "deepstarr":
+        dims, sample_shape, num_classes = 1, (1, 4, 249), 2
+        kernel_choices_default, dilation_choices_default = [3, 7, 11, 15, 19], [1, 3, 7, 15]
+        loss = nn.MSELoss()
+
+        batch_size = 256 # 256 
+        arch_default = 'wrn'  
+        # config_kwargs['grad_scale'] = 10
     # elif dataset[:5] == "CIFAR":
     #     dims, sample_shape, num_classes = 2, (1, 3, 32, 32), 10 if dataset in ['CIFAR10', 'CIFAR10-PERM'] else 100
     #     kernel_choices_default, dilation_choices_default = [3, 5, 7, 9], [1, 3, 7, 15]

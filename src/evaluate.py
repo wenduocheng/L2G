@@ -12,6 +12,9 @@ from scipy import stats
 import pandas as pd
 import copy
 
+from src.helper_scripts.genomic_benchmarks_utils import GenomicBenchmarkDataset, CharacterTokenizer, combine_datasets, NucleotideTransformerDataset 
+from torch.utils.data import DataLoader 
+
 # torch.cuda.set_device(0)
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 print("device:", DEVICE)
@@ -23,8 +26,8 @@ random.seed(0)
 torch.cuda.manual_seed_all(0)
 
 model_name = 'ORCA' # DeepSEA, DeepSEA_FULL, DeepSEA_Original, DASH_FULL_0, DASH_FULL_1, ORCA
-dataset = 'DEEPSEA' # DeepSEA_FULL, DeepSEA_NAS
-exp_id = '451'
+dataset = 'H3K4me3' # DeepSEA_FULL, DeepSEA_NAS
+exp_id = '14'
 if model_name == 'ORCA':
     trained_pth = './results/' + dataset + '/all_' + exp_id + '/0/state_dict.pt'
     trained = torch.load(trained_pth, map_location=DEVICE)
@@ -32,10 +35,10 @@ if model_name == 'ORCA':
     print(args)
     args= AttrDict(args)
     # args.channels=[16, 16, 16, 32, 64, 64]
-   
+    args.run_dash = True
 
 if model_name == "ORCA":
-    root = './datasets' 
+    root = './src/datasets' 
     dims, sample_shape, num_classes, loss, args = get_config(root, args)
     args.embedder_epochs = 0
     args.pretrain_epochs = 0
@@ -285,8 +288,7 @@ def evaluate_deepstarr2(args, model, loader1, loader2, loss, metric):
 # Data & loss function
 # _, _, test_loader, _, _, n_test, data_kwargs = get_data(root, dataset, args.batch_size, args.valid_split, quantize=args.quantize, rc_aug=args.rc_aug, shift_aug=args.shift_aug, one_hot=args.one_hot)
 
-from genomic_benchmarks_utils import GenomicBenchmarkDataset, CharacterTokenizer, combine_datasets, NucleotideTransformerDataset 
-from torch.utils.data import DataLoader 
+
 # two test loaders: one forward, one reverse
 def load_nucleotide_transformer2(root, batch_size, one_hot = True, valid_split=-1, dataset_name = 'enhancers', quantize=False, rc_aug = True, shift_aug=True):
     # Define a dictionary mapping dataset names to max_length
