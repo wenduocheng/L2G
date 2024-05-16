@@ -314,20 +314,30 @@ class Embeddings1D(nn.Module):
         self.one_hot = args.one_hot if args is not None else False
 
         
-        if not args.run_dash: # if not using dash, use default ResNet architecture
-            in_channel=input_shape[-2]
-            num_classes=output_shape
-            mid_channels=min(4 ** (num_classes // 10 + 1), 64)
-            dropout=0
-            try:
-                ks=args.ks 
-                ds=args.ds
-            except: # use default kernel sizes and dilation sizes
-                ks=[15, 19, 19, 7, 7, 7, 19, 19, 19]
-                ds=[1, 15, 15, 1, 1, 1, 15, 15, 15]
-            activation=None
-            remain_shape=False
-            self.dash = ResNet1D_v3(in_channels = in_channel, mid_channels=mid_channels, num_pred_classes=num_classes, dropout_rate=dropout, ks = [15, 19, 19, 7, 7, 7, 19, 19, 19], ds = [1, 15, 15, 1, 1, 1, 15, 15, 15], activation=activation, remain_shape=remain_shape, input_shape=input_shape, embed_dim=embed_dim)
+        if not args.run_dash:
+            if self.embedder_type == 'unet':
+                self.projection = nn.Conv1d(128, embed_dim, kernel_size=self.stack_num, stride=self.stack_num) 
+                downsample = False
+                conv_init(self.projection)
+
+                channels= args.channels if hasattr(args,'channels') else [16,32,64]
+                self.fno = Encoder_v2(input_shape[1],channels=channels,dropout=args.drop_out,f_channel=input_shape[-1],num_class=output_shape,ks=None,ds=None,downsample=downsample,seqlen=input_shape[-1]) 
+   
+                self.fno.apply(conv_init)
+            else: # use default ResNet architecture
+                in_channel=input_shape[-2]
+                num_classes=output_shape
+                mid_channels=min(4 ** (num_classes // 10 + 1), 64)
+                dropout=0
+                try:
+                    ks=args.ks 
+                    ds=args.ds
+                except: # use default kernel sizes and dilation sizes
+                    ks=[15, 19, 19, 7, 7, 7, 19, 19, 19]
+                    ds=[1, 15, 15, 1, 1, 1, 15, 15, 15]
+                activation=None
+                remain_shape=False
+                self.dash = ResNet1D_v3(in_channels = in_channel, mid_channels=mid_channels, num_pred_classes=num_classes, dropout_rate=dropout, ks = [15, 19, 19, 7, 7, 7, 19, 19, 19], ds = [1, 15, 15, 1, 1, 1, 15, 15, 15], activation=activation, remain_shape=remain_shape, input_shape=input_shape, embed_dim=embed_dim)
         else: # run_dash = True
             print('Backbone selection')
             # backbone zoo: resnet, unet
@@ -344,6 +354,11 @@ class Embeddings1D(nn.Module):
                 in_channel=input_shape[-2]
                 num_classes=output_shape
                 mid_channels=min(4 ** (num_classes // 10 + 1), 64)
+                dropout=0
+                activation=None
+                remain_shape=False
+                ks = [15, 19, 19, 7, 7, 7, 19, 19, 19]
+                ds = [1, 15, 15, 1, 1, 1, 15, 15, 15]
                 model = ResNet1D_v3(in_channels = in_channel, mid_channels=mid_channels, num_pred_classes=num_classes, dropout_rate=dropout, ks = ks, ds = ds, activation=activation, remain_shape=remain_shape, input_shape=input_shape, embed_dim=embed_dim).to(args.device)
                 # optimizer
                 optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0005)

@@ -11,12 +11,12 @@ hyperparameters:
     maxsamples: 256 # 64, 256
     target_seq_len: 256 # 512 for roberta, 2048 for llama, 4096 for llama2, 2048 for pythia-1b, 1024 for flan t5
 
-    experiment_id: 13
+    experiment_id: 14
 
     seed: 0
     epochs: 25 # 13
-    pretrain_epochs: 100 # 0, 20
-    embedder_epochs: 60 # 60, 20
+    pretrain_epochs: 60 # 0, 20
+    embedder_epochs: 100 # 60, 20
     predictor_epochs: 0
 
     joint_optim: True
