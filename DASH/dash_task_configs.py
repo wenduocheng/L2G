@@ -187,7 +187,7 @@ def get_config(dataset):
 
         if dataset == "dummy_mouse_enhancers_ensembl":
             # dims, sample_shape, num_classes = 1, (1, 9, 4710), 2
-            batch_size = 128
+            batch_size = 64
             dims, sample_shape, num_classes = 1, (1, 5, 4707), 2
             # dims, sample_shape, num_classes = 1, (1, 1, 4707), 2
         elif dataset == "demo_coding_vs_intergenomic_seqs":

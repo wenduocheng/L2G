@@ -381,6 +381,7 @@ class Embeddings1D(nn.Module):
 
                 # unet
                 channels= args.channels if hasattr(args,'channels') else [16,32,64]
+                downsample = False
                 model = Encoder_v2(input_shape[1],channels=channels,dropout=args.drop_out,f_channel=input_shape[-1],num_class=output_shape,ks=None,ds=None,downsample=downsample,seqlen=input_shape[-1]).to(args.device)
                 optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0005)
                 scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda = weight_sched_train)
