@@ -11,27 +11,27 @@ hyperparameters:
     maxsamples: 256 # 64, 256
     target_seq_len: 512 # 512 for roberta, 2048 for llama, 4096 for llama2, 2048 for pythia-1b, 1024 for flan t5
 
-    experiment_id: 451
+    experiment_id: 452
 
     seed: 0
     epochs: 25 # 13
-    pretrain_epochs: 0 # 0, 20
-    embedder_epochs: 20 # 60, 20
+    pretrain_epochs: 60 # 0, 20
+    embedder_epochs: 100 # 60, 20
     predictor_epochs: 0
 
     joint_optim: True
-    alpha: 0.01 # weight for otdd 
+    alpha: 1 # weight for otdd 
     beta: 1 # weight for bce
     finetune_method: all # all, lora, freeze
     one_hot: True # one hot encoding
-
+    run_dash: True
     # lora_task_type: "SEQ_CLS"s
     lora_r: 12 # 12
     lora_alpha: 32 # 32
     lora_dropout: 0.1
     lora_target_modules: ["q_proj", "v_proj"]
 
-    drop_out: 0.2 #0
+    drop_out: 0.05 #0
     label_smoothing_factor: 0
     activation: None
     rc_aug: False # reverse complement augmentation
@@ -63,9 +63,17 @@ hyperparameters:
     optimizer:
         name: Adam
         params:
-            lr: 0.00005 # 0.00001 for pythia-1b, 0.001   
+            lr: 0.00001 # 0.00001 for pythia-1b, 0.001   
             betas: [0.9, 0.98] 
             weight_decay: 0.00001
+            momentum: 0.99
+    
+    embedder_optimizer:
+        name: SGD
+        params:
+            lr: 0.01 # 0.000005
+            betas: [0.9, 0.98] 
+            weight_decay: 0.000005
             momentum: 0.99
     
     scheduler:  

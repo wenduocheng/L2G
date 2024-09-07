@@ -10,7 +10,7 @@ hyperparameters:
     maxsamples: 256 #512
     target_seq_len: 512 #256 #512
 
-    experiment_id: 15 
+    experiment_id: 16 
 
     seed: 0
     epochs: 25 #25
@@ -87,7 +87,7 @@ hyperparameters:
 
     num_workers: 2
     reproducibility: False
-    valid_split: False
+    valid_split: True
 
 min_validation_period:
     epochs: 1

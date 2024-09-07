@@ -2,7 +2,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 # import torch.nn.functional as F
-# import torchvision.transforms as transforms
 import math
 from torch.utils.data import Dataset, IterableDataset, DataLoader
 from timeit import default_timer
@@ -10,13 +9,19 @@ from functools import partial
 from transformers import AutoModel, AutoConfig, SwinForImageClassification, SwinForMaskedImageModeling, RobertaForTokenClassification, AutoTokenizer, DataCollatorWithPadding
 from transformers.models.roberta.modeling_roberta import RobertaLayer
 from otdd.pytorch.distance import DatasetDistance, FeatureCost
-
-from task_configs import get_data, get_optimizer_scheduler, get_config, get_metric
-from utils import conv_init, embedder_init, embedder_placeholder, adaptive_pooler, to_2tuple, set_grad_state, create_position_ids_from_inputs_embeds, l2, MMD_loss, get_params_to_update 
 import copy
-from networks.wrn1d import ResNet1D, ResNet1D_v2, ResNet1D_v3
-from networks.vq import Encoder, Encoder_v2
 from datasets import load_dataset
+
+import sys 
+sys.path.append('./')
+
+from src.task_configs import get_data, get_optimizer_scheduler, get_config, get_metric
+from src.utils import conv_init, embedder_init, embedder_placeholder, adaptive_pooler, to_2tuple, set_grad_state, create_position_ids_from_inputs_embeds, l2, MMD_loss, get_params_to_update 
+from src.networks.wrn1d import ResNet1D, ResNet1D_v2, ResNet1D_v3
+from src.networks.vq import Encoder, Encoder_v2
+
+ 
+
  
 import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -194,7 +199,7 @@ class wrapper1D(torch.nn.Module):
                     self.predictor = nn.Linear(in_features=1024, out_features=output_shape)
                 else: # roberta base
                     if use_embedder:
-                        if args.embedder_type == 'resnet':
+                        if args.embedder_type == 'resnet' or args.embedder_type == 'unet':
                             # if (args.dataset == 'DEEPSEA' or args.dataset == 'DEEPSEA_FULL'):
                             #     self.predictor = nn.Linear(in_features=384000, out_features=output_shape)
                             # else:
@@ -328,6 +333,7 @@ class Embeddings1D(nn.Module):
                 in_channel=input_shape[-2]
                 num_classes=output_shape
                 mid_channels=min(4 ** (num_classes // 10 + 1), 64)
+                # mid_channels = 128
                 dropout=0
                 try:
                     ks=args.ks 
@@ -347,6 +353,7 @@ class Embeddings1D(nn.Module):
                 train_loader, val_loader, _, n_train, _, _, data_kwargs = get_data(root, args.dataset, args.batch_size, args.valid_split, quantize=args.quantize if hasattr(args, 'quantize') else False, rc_aug=args.rc_aug if hasattr(args, 'rc_aug') else False, shift_aug=args.shift_aug if hasattr(args, 'shift_aug') else False, one_hot=args.one_hot if hasattr(args, 'one_hot') else True)
                 # loss
                 _, _, _, loss, _ = get_config(root, args)
+                loss = loss.to(args.device)
                 # metric
                 metric, _ = get_metric(root, args.dataset)
                 
@@ -354,12 +361,15 @@ class Embeddings1D(nn.Module):
                 in_channel=input_shape[-2]
                 num_classes=output_shape
                 mid_channels=min(4 ** (num_classes // 10 + 1), 64)
+                # mid_channels=128
                 dropout=0
                 activation=None
                 remain_shape=False
                 ks = [15, 19, 19, 7, 7, 7, 19, 19, 19]
                 ds = [1, 15, 15, 1, 1, 1, 15, 15, 15]
                 model = ResNet1D_v3(in_channels = in_channel, mid_channels=mid_channels, num_pred_classes=num_classes, dropout_rate=dropout, ks = ks, ds = ds, activation=activation, remain_shape=remain_shape, input_shape=input_shape, embed_dim=embed_dim).to(args.device)
+                if args.quantize == True:
+                    model=model.bfloat16() 
                 # optimizer
                 optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0005)
                 # scheduler
@@ -376,20 +386,23 @@ class Embeddings1D(nn.Module):
 
                 train_loss_1 = train_one_epoch3(args, model, optimizer, train_loader, loss, n_train)
                 val_loss_1, val_score_1 = evaluate3(args, model, val_loader, loss, metric)
-                print("[backbone ", "resnet", "\ttrain loss:", "%.4f" % train_loss_1, "\tval loss:", "%.4f" % val_loss_1, "\tval score:", "%.4f" % val_score_1)
+                print("[backbone ", "resnet]", "\ttrain loss:", "%.4f" % train_loss_1, "\tval loss:", "%.4f" % val_loss_1, "\tval score:", "%.4f" % val_score_1)
                 del model, optimizer, scheduler
 
                 # unet
                 channels= args.channels if hasattr(args,'channels') else [16,32,64]
                 downsample = False
                 model = Encoder_v2(input_shape[1],channels=channels,dropout=args.drop_out,f_channel=input_shape[-1],num_class=output_shape,ks=None,ds=None,downsample=downsample,seqlen=input_shape[-1]).to(args.device)
+                if args.quantize == True:
+                    model=model.bfloat16() 
                 optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0005)
                 scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda = weight_sched_train)
                 train_loss_2 = train_one_epoch3(args, model, optimizer, train_loader, loss, n_train)
                 val_loss_2, val_score_2 = evaluate3(args, model, val_loader, loss, metric)
-                print("[backbone ", "resnet", "\ttrain loss:", "%.4f" % train_loss_2, "\tval loss:", "%.4f" % val_loss_2, "\tval score:", "%.4f" % val_score_2)
+                print("[backbone ", "unet]", "\ttrain loss:", "%.4f" % train_loss_2, "\tval loss:", "%.4f" % val_loss_2, "\tval score:", "%.4f" % val_score_2)
                 del train_loader, val_loader
                 del model, optimizer, scheduler
+                torch.cuda.empty_cache() 
                 if val_score_1 > val_score_2:
                     self.embedder_type = 'resnet' 
                 else:
@@ -403,6 +416,7 @@ class Embeddings1D(nn.Module):
     
                 num_classes=output_shape
                 mid_channels=min(4 ** (num_classes // 10 + 1), 64)
+                # mid_channels=128
                 dropout=0
                 if args.run_dash:
                     dash_result_path = f"./dash_results/{args.dataset}/wrn/wrn/{args.seed}/dash_final_results.npy"
@@ -432,7 +446,7 @@ class Embeddings1D(nn.Module):
                 remain_shape=False
                 self.dash = ResNet1D_v3(in_channels = in_channel, mid_channels=mid_channels, num_pred_classes=num_classes, dropout_rate=dropout, ks = ks, ds = ds, activation=activation, remain_shape=remain_shape, input_shape=input_shape, embed_dim=embed_dim)
                 # self.dash = ResNet1D_v2(in_channels = in_channel, mid_channels=mid_channels, num_pred_classes=num_classes, dropout_rate=dropout, ks = ks, ds = ds, activation=activation, remain_shape=remain_shape, input_shape=input_shape, embed_dim=embed_dim,target_seq_len=target_seq_len)
-            elif self.embedder_type == 'unet' or self.embedder_type=='unet-dash':
+            elif self.embedder_type == 'unet':
                 self.projection = nn.Conv1d(128, embed_dim, kernel_size=self.stack_num, stride=self.stack_num) 
                 downsample = False
                 conv_init(self.projection)
@@ -656,7 +670,6 @@ def get_tgt_model(args, root, sample_shape, num_classes, loss, add_loss=False, u
                     feats2 = torch.cat(feats2, 0)
                     ys = torch.cat(ys, 0)
                     loss1 = score_func(feats)
-                    #print((feats2.argmax(-1)==ys).float().mean())
                     loss2 = second_loss(feats2, ys)
                     loss = alpha * loss1 + beta * loss2
                     loss.backward()
@@ -682,11 +695,11 @@ def get_tgt_model(args, root, sample_shape, num_classes, loss, add_loss=False, u
 
             tgt_model_scheduler.step()
         
-        metric, compare_metrics = get_metric(root, args.dataset)
-        test_time_start = default_timer()
-        test_loss, test_score = evaluate_embedder(args, tgt_model, test_loader, second_loss, metric)
-        test_time_end = default_timer()
-        print("[test embedder with predictor]", "\ttime elapsed:", "%.4f" % (test_time_end - test_time_start), "\ttest loss:", "%.4f" % test_loss,"\ttest score:", "%.4f" % test_score)
+        # metric, compare_metrics = get_metric(root, args.dataset)
+        # test_time_start = default_timer()
+        # test_loss, test_score = evaluate_embedder(args, tgt_model, test_loader, second_loss, metric)
+        # test_time_end = default_timer()
+        # print("[test embedder with predictor]", "\ttime elapsed:", "%.4f" % (test_time_end - test_time_start), "\ttest loss:", "%.4f" % test_loss,"\ttest score:", "%.4f" % test_score)
     
     elif joint_optim and args.objective == 'otdd-exact':
         src_train_loader, _, _, _, _, _, _ = get_data(root, args.embedder_dataset, args.batch_size, False, maxsize=2000)
@@ -744,12 +757,7 @@ def get_tgt_model(args, root, sample_shape, num_classes, loss, add_loss=False, u
                         feats = torch.cat(feats, 0).mean(1)
                         feats2 = torch.cat(feats2, 0)
                         ys = torch.cat(ys, 0)
-                        # print('545', feats.shape)
-                        # print('545', feats2.shape)
-                        # print('545', ys.size())
-                        # print(feats)
-                        # print(feats2)
-                        # print(ys)
+      
                         loss1 = tgt_class_weights[i] * score_func(feats)
                         loss2 = second_loss(feats2, ys) / len(tgt_train_loaders[i])
                         loss = alpha * loss1 + beta * loss2
@@ -826,7 +834,10 @@ def get_tgt_model(args, root, sample_shape, num_classes, loss, add_loss=False, u
             tgt_model_scheduler.step()
             tgt_model_optimizer.zero_grad()
 
-    del tgt_train_loader #
+    try:
+        del tgt_train_loader #
+    except:
+        pass
     torch.cuda.empty_cache()
     
     if hasattr(args, 'data_parallel') and args.data_parallel:
@@ -1052,7 +1063,7 @@ def train_one_epoch3(args,model, optimizer, loader, loss, temp):
         
         x, y = x.to(args.device), y.to(args.device)
         out = model(x)
-
+        # print(x.get_device(),out.get_device(),y.get_device())
         l = loss(out, y)
         l.backward()
 

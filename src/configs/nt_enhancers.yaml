@@ -10,12 +10,12 @@ hyperparameters:
     maxsamples: 256 #512
     target_seq_len: 128 #256 #512
 
-    experiment_id: 14
+    experiment_id: 15
 
     seed: 0
     epochs: 25 #25
-    embedder_epochs: 100 
-    pretrain_epochs: 60 
+    embedder_epochs: 2 # 100 
+    pretrain_epochs: 1 # 60 
     predictor_epochs: 0 
 
     joint_optim: True
@@ -23,7 +23,7 @@ hyperparameters:
     beta: 1 # weight for bce
     finetune_method: all
     one_hot: True 
-    run_dash: True
+    run_dash: False
     lora_r: 12 # 12
     lora_alpha: 32 # 32
     lora_dropout: 0.1

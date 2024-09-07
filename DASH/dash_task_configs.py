@@ -138,8 +138,8 @@ def get_model(arch, sample_shape, num_classes, config_kwargs, ks = None, ds = No
             model = DeepCon(L=128, num_blocks=8, width=16, expected_n_channels=57, no_dilation=False, ks = ks, ds = ds)
     
     else:
-        mid_channels = min(4 ** (num_classes // 10 + 1), 64)
-
+        # mid_channels = min(4 ** (num_classes // 10 + 1), 64)
+        mid_channels=128
         if arch == 'your_new_arch': # modify this to experiment with a new architecture
             model = None
         elif arch == 'TCN':
@@ -261,7 +261,7 @@ def get_config(dataset):
         dims, sample_shape, num_classes = 1, (1, 4, 249), 2
         kernel_choices_default, dilation_choices_default = [3, 7, 11, 15, 19], [1, 3, 7, 15]
         loss = nn.MSELoss()
-
+        config_kwargs['activation'] = 'sigmoid'
         batch_size = 256 # 256 
         arch_default = 'wrn'  
         # config_kwargs['grad_scale'] = 10
@@ -391,6 +391,9 @@ def get_config(dataset):
 
     if arch_default == 'wrn':
         epochs_default, retrain_epochs = 60, 10
+
+        # if dataset == "deepstarr":
+        #     epochs_default, retrain_epochs = 1, 1
         retrain_freq = epochs_default
         opt, arch_opt = partial(torch.optim.SGD, momentum=0.9, nesterov=True), partial(torch.optim.SGD, momentum=0.9, nesterov=True)
         weight_decay = 5e-4 
@@ -523,6 +526,7 @@ def get_config(dataset):
 def get_hp_configs(dataset, n_train):
 
     epochs = 40
+    # epochs = 0
     if n_train < 50:
         subsamping_ratio = 0.2
     elif n_train < 100:

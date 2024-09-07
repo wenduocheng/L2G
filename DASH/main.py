@@ -65,6 +65,9 @@ def main():
     dims, sample_shape, num_classes, batch_size, epochs, loss, lr, arch_lr, weight_decay, opt, arch_opt, weight_sched_search, weight_sched_train, accum, clip, retrain_clip, validation_freq, retrain_freq, \
     einsum, retrain_epochs, arch_default, kernel_choices_default, dilation_choices_default, quick_search, quick_retrain, config_kwargs = get_config(args.dataset)  
     
+
+    # args.print_freq = 1 #
+
     arch = args.arch if len(args.arch) > 0 else arch_default
     if config_kwargs['arch_retrain_default'] is not None:
         arch_retrain = config_kwargs['arch_retrain_default']
@@ -233,7 +236,10 @@ def main():
                         retrain_time_end = default_timer()
                         search_scores.append(retrain_val_score)
                         train_time.append(retrain_time_end - retrain_time_start)
-                        print("[hp search] bs = ", batch_size, " lr = ", "%.6f" % lr, " drop rate = ", "%.2f" % drop_rate, " weight decay = ", "%.6f" % weight_decay, " momentum = ", "%.2f" % momentum, " time elapsed:", "%.4f" % (retrain_time_end - retrain_time_start), "\ttrain loss:", "%.4f" % retrain_loss, "\tval loss:", "%.4f" % retrain_val_loss, "\tval score:", "%.4f" % retrain_val_score)
+                        try:
+                            print("[hp search] bs = ", batch_size, " lr = ", "%.6f" % lr, " drop rate = ", "%.2f" % drop_rate, " weight decay = ", "%.6f" % weight_decay, " momentum = ", "%.2f" % momentum, " time elapsed:", "%.4f" % (retrain_time_end - retrain_time_start), "\ttrain loss:", "%.4f" % retrain_loss, "\tval loss:", "%.4f" % retrain_val_loss, "\tval score:", "%.4f" % retrain_val_score)
+                        except:
+                            continue
                         del retrain_model
 
                     idx = np.argwhere(search_scores == compare_metrics(search_scores))[0][0]
@@ -374,58 +380,88 @@ def train_one_epoch(model, optimizer, scheduler, device, loader, loss, clip, acc
     return train_loss / temp
 
 
-def evaluate(model, device, loader, loss, metric, n_eval, decoder=None, transform=None, fsd_epoch=None):
+# def evaluate(model, device, loader, loss, metric, n_eval, decoder=None, transform=None, fsd_epoch=None):
+#     model.eval()
+    
+#     eval_loss, eval_score = 0, 0
+    
+#     if fsd_epoch is None:
+#         with torch.no_grad():
+#             for data in loader:
+#                 if transform is not None:
+#                     x, y, z = data
+#                     z = z.to(device)
+#                 else:
+#                     x, y = data
+                                    
+#                 x, y = x.to(device), y.to(device)
+#                 out = model(x)
+                
+#                 if decoder is not None:
+#                     out = decoder.decode(out).view(x.shape[0], -1)
+#                     y = decoder.decode(y).view(x.shape[0], -1)
+                                    
+#                 if transform is not None:
+#                     out = transform(out, z)
+#                     y = transform(y, z)
+                
+#                 eval_loss += loss(out, y).item() 
+#                 eval_score += metric(out, y).item()
+#                 # eval_score += metric(y, torch.round(out)).item() # human_enhancer
+
+#         eval_loss /= n_eval
+#         eval_score /= n_eval
+
+#     else:
+#         outs, ys = [], []
+#         with torch.no_grad():
+#             for ix in range(loader.len):
+
+#                 if fsd_epoch < 100:
+#                     if ix > 2000: break
+
+#                 x, y = loader[ix]
+#                 x, y = x.to(device), y.to(device)
+#                 out = model(x).mean(0).unsqueeze(0)
+#                 eval_loss += loss(out, y).item()
+#                 outs.append(torch.sigmoid(out).detach().cpu().numpy()[0])
+#                 ys.append(y.detach().cpu().numpy()[0])
+
+#         outs = np.asarray(outs).astype('float32')
+#         ys = np.asarray(ys).astype('int32')
+#         stats = calculate_stats(outs, ys)
+#         eval_score = np.mean([stat['AP'] for stat in stats])
+#         eval_loss /= n_eval
+
+#     return eval_loss, eval_score
+
+def evaluate(model, device, loader, loss, metric, n_eval, decoder=None, transform=None, fsd_epoch=None): #
     model.eval()
     
     eval_loss, eval_score = 0, 0
-    
-    if fsd_epoch is None:
-        with torch.no_grad():
-            for data in loader:
-                if transform is not None:
-                    x, y, z = data
-                    z = z.to(device)
-                else:
-                    x, y = data
-                                    
-                x, y = x.to(device), y.to(device)
-                out = model(x)
-                
-                if decoder is not None:
-                    out = decoder.decode(out).view(x.shape[0], -1)
-                    y = decoder.decode(y).view(x.shape[0], -1)
-                                    
-                if transform is not None:
-                    out = transform(out, z)
-                    y = transform(y, z)
-                
-                eval_loss += loss(out, y).item() 
-                eval_score += metric(out, y).item()
-                # eval_score += metric(y, torch.round(out)).item() # human_enhancer
 
-        eval_loss /= n_eval
-        eval_score /= n_eval
+    ys, outs, n_eval, n_data = [], [], 0, 0
 
-    else:
-        outs, ys = [], []
-        with torch.no_grad():
-            for ix in range(loader.len):
+    with torch.no_grad():
+        for i, data in enumerate(loader):
+            x, y = data
+                                
+            x, y = x.to(device), y.to(device) 
 
-                if fsd_epoch < 100:
-                    if ix > 2000: break
+            out = model(x)
 
-                x, y = loader[ix]
-                x, y = x.to(device), y.to(device)
-                out = model(x).mean(0).unsqueeze(0)
-                eval_loss += loss(out, y).item()
-                outs.append(torch.sigmoid(out).detach().cpu().numpy()[0])
-                ys.append(y.detach().cpu().numpy()[0])
+            outs.append(out) 
+            ys.append(y) 
+            n_data += x.shape[0]
+        
+        
+        outs = torch.cat(outs, 0)
+        ys = torch.cat(ys, 0)
 
-        outs = np.asarray(outs).astype('float32')
-        ys = np.asarray(ys).astype('int32')
-        stats = calculate_stats(outs, ys)
-        eval_score = np.mean([stat['AP'] for stat in stats])
-        eval_loss /= n_eval
+        eval_loss += loss(outs, ys).item()
+        # print(outs)
+        # print(ys)
+        eval_score += metric(outs, ys).item()
 
     return eval_loss, eval_score
 

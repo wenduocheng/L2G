@@ -10,12 +10,12 @@ hyperparameters:
     maxsamples: 256 #512
     target_seq_len: 128 #256 #512
 
-    experiment_id: 22
+    experiment_id: 24
 
     seed: 0
     epochs: 25 #25
-    embedder_epochs: 100 # 60 
-    pretrain_epochs: 60 
+    embedder_epochs: 0 # 60 
+    pretrain_epochs: 0 
     predictor_epochs: 0 
 
     joint_optim: True

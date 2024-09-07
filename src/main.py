@@ -16,6 +16,9 @@ from embedder import get_tgt_model
 # from accelerate import Accelerator # 
 # accelerator = Accelerator() #
 
+
+
+
 def main(use_determined, args, info=None, context=None):
 
     args.device = 'cuda' if torch.cuda.is_available() else 'cpu'

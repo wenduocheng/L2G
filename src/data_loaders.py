@@ -18,10 +18,12 @@ from torch.utils.data.sampler import SubsetRandomSampler
 import scipy.io 
 from random import random
 from torch.utils.data import DataLoader 
+from datasets import load_dataset
 import copy
 import sys 
 sys.path.append('./')
-from src.helper_scripts.genomic_benchmarks_utils import GenomicBenchmarkDataset, CharacterTokenizer, combine_datasets, NucleotideTransformerDataset 
+from src.helper_scripts.genomic_benchmarks_utils import GenomicBenchmarkDataset, CharacterTokenizer, combine_datasets
+# NucleotideTransformerDataset 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
@@ -78,7 +80,8 @@ def reverse_complement_integer(encoded_dna):
     # Apply the mapping
     reversed_complement = complement_map[reversed_seqs]
     return reversed_complement
-def load_deepsea(root, batch_size, one_hot = True, valid_split=-1,rc_aug=False, shift_aug=False):
+
+def load_deepsea(root, batch_size, one_hot = True,quantize=False, valid_split=-1,rc_aug=False, shift_aug=False):
     filename = root + '/deepsea' + '/deepsea_filtered.npz'
 
     if not os.path.isfile(filename):
@@ -450,27 +453,52 @@ def load_deepstarr(root, batch_size, one_hot = True, valid_split=-1, quantize=Fa
         x_test = x_test.to(torch.bfloat16)  
         y_test = y_test.to(torch.bfloat16) 
 
+    if valid_split > 0:
+        print('No valid split')
+        x_train = torch.cat((x_train, x_val), dim=0)
+        y_train = torch.cat((y_train, y_val), dim=0)
+
     del X_train, Y_train, X_valid, Y_valid, X_test, Y_test
 
     if shift_aug:
-        def shift_seqs(seq, shift=0):
-            seq = copy.deepcopy(seq)
-            if shift > 0:
-                seq[:, :, :-shift] = seq.clone()[:, :, shift:]
-                seq[:, :, -shift:] = 4  # Fill with special token
-            elif shift < 0:  # shift up 
-                seq[:, :, shift:] = seq.clone()[:, :, :-shift]
-                seq[:, :, :shift] = 4  # Fill with special token
-            return seq
-        x_train2 = shift_seqs(x_train,shift=3)
-        x_train3 = shift_seqs(x_train,shift=-3)
-        x_train = torch.cat((x_train, x_train2), dim=0)
-        x_train = torch.cat((x_train, x_train3), dim=0)
-        y_train2 = copy.deepcopy(y_train)
-        y_train3 = copy.deepcopy(y_train)
-        y_train = torch.cat((y_train, y_train2), dim=0)
-        y_train = torch.cat((y_train, y_train3), dim=0)
-        del x_train2, x_train3, y_train2, y_train3
+        if not one_hot:
+            def shift_seqs(seq, shift=0):
+                seq = copy.deepcopy(seq)
+                if shift > 0:
+                    seq[:, :, :-shift] = seq.clone()[:, :, shift:]
+                    seq[:, :, -shift:] = 4  # Fill with special token
+                elif shift < 0:  # shift up 
+                    seq[:, :, shift:] = seq.clone()[:, :, :-shift]
+                    seq[:, :, :shift] = 4  # Fill with special token
+                return seq
+            x_train2 = shift_seqs(x_train,shift=3)
+            x_train3 = shift_seqs(x_train,shift=-3)
+            x_train = torch.cat((x_train, x_train2), dim=0)
+            x_train = torch.cat((x_train, x_train3), dim=0)
+            y_train2 = copy.deepcopy(y_train)
+            y_train3 = copy.deepcopy(y_train)
+            y_train = torch.cat((y_train, y_train2), dim=0)
+            y_train = torch.cat((y_train, y_train3), dim=0)
+            del x_train2, x_train3, y_train2, y_train3
+        else:
+            def shift_seqs(seq, shift=0):
+                seq = copy.deepcopy(seq)
+                if shift > 0:
+                    seq[:, :, :-shift] = seq.clone()[:, :, shift:]
+                    seq[:, :, -shift:] = 0
+                elif shift < 0:  # shift up 
+                    seq[:, :, shift:] = seq.clone()[:, :, :-shift]
+                    seq[:, :, :shift] = 0
+                return seq
+            x_train2 = shift_seqs(x_train,shift=3)
+            x_train3 = shift_seqs(x_train,shift=-3)
+            x_train = torch.cat((x_train, x_train2), dim=0)
+            x_train = torch.cat((x_train, x_train3), dim=0)
+            y_train2 = copy.deepcopy(y_train)
+            y_train3 = copy.deepcopy(y_train)
+            y_train = torch.cat((y_train, y_train2), dim=0)
+            y_train = torch.cat((y_train, y_train3), dim=0)
+            del x_train2, x_train3, y_train2, y_train3
 
     print('x_train',x_train.shape)
     print('y_train',y_train.shape)
@@ -581,8 +609,120 @@ def load_genomic_benchmarks(root, batch_size, one_hot = True, valid_split=-1, da
     test_loader = DataLoader(ds_test, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
     return train_loader, None, test_loader
 
-def load_nucleotide_transformer(root, batch_size, one_hot = True, valid_split=-1, dataset_name = 'enhancers', quantize=False, rc_aug = True, shift_aug=True):
-    # Define a dictionary mapping dataset names to max_length
+
+# def load_nucleotide_transformer(root, batch_size, one_hot = True, valid_split=-1, dataset_name = 'enhancers', quantize=False, rc_aug = True, shift_aug=True):
+#     # Define a dictionary mapping dataset names to max_length
+#     max_length_dict = {
+#         "enhancers": 200,
+#         "enhancers_types": 200,  # nclass=3
+#         "H3": 500,
+#         "H3K4me1": 500,
+#         "H3K4me2": 500,
+#         "H3K4me3": 500,
+#         "H3K9ac": 500,
+#         "H3K14ac": 500,
+#         "H3K36me3": 500,
+#         "H3K79me3": 500,
+#         "H4": 500,
+#         "H4ac": 500,
+#         "promoter_all": 300,
+#         "promoter_no_tata": 300,
+#         "promoter_tata": 300,
+#         "splice_sites_acceptors": 600,
+#         "splice_sites_donors": 600,
+#         "splice_sites_all": 400
+#     }
+#     # Use the dictionary to get max_length
+#     max_length = max_length_dict.get(dataset_name)
+#     use_padding = True
+#     add_eos = False  # add end of sentence token
+#     tokenizer = CharacterTokenizer(
+#             characters=['A', 'C', 'G', 'T', 'N'],  # add DNA characters, N is uncertain
+#             model_max_length=max_length + 2,  # to account for special tokens, like EOS
+#             add_special_tokens=False,  # we handle special tokens elsewhere
+#             padding_side='left', # since HyenaDNA is causal, we pad on the left
+#         )
+#     ds_train = NucleotideTransformerDataset(
+#             max_length = max_length,
+#             dest_path = root + '/nucleotide_transformer_downstream_tasks',
+#             use_padding = use_padding,
+#             split = 'train',
+         
+#             tokenizer=tokenizer,
+#             dataset_name=dataset_name,
+#             rc_aug=False,
+#             add_eos=add_eos,
+#             one_hot=one_hot,
+#             quantize=quantize
+#         )
+#     ds_test = NucleotideTransformerDataset(
+#         max_length = max_length,
+#         dest_path = root+ '/nucleotide_transformer_downstream_tasks',
+#         use_padding = use_padding,
+#         split = 'test',
+#         tokenizer=tokenizer,
+#         dataset_name=dataset_name,
+#         rc_aug=False,
+#         add_eos=add_eos,
+#         one_hot=one_hot,
+#         quantize=quantize
+#         )
+        
+#     if shift_aug:
+#         ds_train3 = NucleotideTransformerDataset(
+#             max_length = max_length,
+#             dest_path=root + '/nucleotide_transformer_downstream_tasks',
+#             use_padding = use_padding,
+#             split = 'train',
+            
+#             tokenizer=tokenizer,
+#             dataset_name=dataset_name,
+#             rc_aug=True,
+#             add_eos=add_eos,
+#             one_hot=one_hot,
+#             quantize=quantize
+#         )
+#         # ds_train4 = NucleotideTransformerDataset(
+#         #     max_length = max_length,
+#         #     dest_path=root + '/nucleotide_transformer_downstream_tasks',
+#         #     use_padding = use_padding,
+#         #     split = 'train',
+            
+#         #     tokenizer=tokenizer,
+#         #     dataset_name=dataset_name,
+#         #     rc_aug=True,
+#         #     add_eos=add_eos,
+#         #     one_hot=one_hot,
+#         #     quantize=quantize
+#         # )
+#         ds_train3.shift=3
+#         # ds_train4.shift=1
+#         ds_train = combine_datasets(ds_train, ds_train3)
+#         # ds_train=combine_datasets(ds_train,ds_train4)
+#         #ds_test=interleave_datasets(ds_test,ds_test2)
+
+#     if rc_aug:
+#         ds_train2 = NucleotideTransformerDataset(
+#             max_length = max_length,
+#             dest_path=root + '/nucleotide_transformer_downstream_tasks',
+#             use_padding = use_padding,
+#             split = 'train',
+            
+#             tokenizer=tokenizer,
+#             dataset_name=dataset_name,
+#             rc_aug=True,
+#             add_eos=add_eos,
+#             one_hot=one_hot,
+#             quantize=quantize
+#         )
+#         ds_train = combine_datasets(ds_train, ds_train2)
+
+#     train_loader = DataLoader(ds_train, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=False)
+#     test_loader = DataLoader(ds_test, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=False)
+#     return train_loader, None, test_loader
+
+# def load_nucleotide_transformer(batch_size, one_hot = True, valid_split=-1, dataset_name = 'enhancers'):
+def load_nucleotide_transformer(root, batch_size, one_hot = True, valid_split=True, dataset_name = "enhancers", quantize=False,rc_aug=True, shift_aug=True):
     max_length_dict = {
         "enhancers": 200,
         "enhancers_types": 200,  # nclass=3
@@ -601,96 +741,86 @@ def load_nucleotide_transformer(root, batch_size, one_hot = True, valid_split=-1
         "promoter_tata": 300,
         "splice_sites_acceptors": 600,
         "splice_sites_donors": 600,
-        "splice_sites_all": 400
+        "splice_sites_all": 600
     }
-    # Use the dictionary to get max_length
+
     max_length = max_length_dict.get(dataset_name)
-    use_padding = True
-    add_eos = False  # add end of sentence token
-    tokenizer = CharacterTokenizer(
-            characters=['A', 'C', 'G', 'T', 'N'],  # add DNA characters, N is uncertain
-            model_max_length=max_length + 2,  # to account for special tokens, like EOS
-            add_special_tokens=False,  # we handle special tokens elsewhere
-            padding_side='left', # since HyenaDNA is causal, we pad on the left
-        )
-    ds_train = NucleotideTransformerDataset(
-            max_length = max_length,
-            dest_path = root + '/nucleotide_transformer_downstream_tasks',
-            use_padding = use_padding,
-            split = 'train',
-         
-            tokenizer=tokenizer,
-            dataset_name=dataset_name,
-            rc_aug=False,
-            add_eos=add_eos,
-            one_hot=one_hot,
-            quantize=quantize
-        )
-    ds_test = NucleotideTransformerDataset(
-        max_length = max_length,
-        dest_path = root+ '/nucleotide_transformer_downstream_tasks',
-        use_padding = use_padding,
-        split = 'test',
-        tokenizer=tokenizer,
-        dataset_name=dataset_name,
-        rc_aug=False,
-        add_eos=add_eos,
-        one_hot=one_hot,
-        quantize=quantize
-        )
-        
-    if shift_aug:
-        ds_train3 = NucleotideTransformerDataset(
-            max_length = max_length,
-            dest_path=root + '/nucleotide_transformer_downstream_tasks',
-            use_padding = use_padding,
-            split = 'train',
-            
-            tokenizer=tokenizer,
-            dataset_name=dataset_name,
-            rc_aug=True,
-            add_eos=add_eos,
-            one_hot=one_hot,
-            quantize=quantize
-        )
-        # ds_train4 = NucleotideTransformerDataset(
-        #     max_length = max_length,
-        #     dest_path=root + '/nucleotide_transformer_downstream_tasks',
-        #     use_padding = use_padding,
-        #     split = 'train',
-            
-        #     tokenizer=tokenizer,
-        #     dataset_name=dataset_name,
-        #     rc_aug=True,
-        #     add_eos=add_eos,
-        #     one_hot=one_hot,
-        #     quantize=quantize
-        # )
-        ds_train3.shift=3
-        # ds_train4.shift=1
-        ds_train = combine_datasets(ds_train, ds_train3)
-        # ds_train=combine_datasets(ds_train,ds_train4)
-        #ds_test=interleave_datasets(ds_test,ds_test2)
+                        
+    def one_hot_encode(sequence):
+      mapping = {'A': [1, 0, 0, 0, 0],
+                'C': [0, 1, 0, 0, 0],
+                'G': [0, 0, 1, 0, 0],
+                'T': [0, 0, 0, 1, 0],
+                'N': [0, 0, 0, 0, 1]}
+    #   mapping = {'A': [1, 0, 0, 0],
+    #             'C': [0, 1, 0, 0],
+    #             'G': [0, 0, 1, 0],
+    #             'T': [0, 0, 0, 1],
+    #             'N': [0, 0, 0, 0]}
+      return np.array([mapping[base] for base in sequence])
 
-    if rc_aug:
-        ds_train2 = NucleotideTransformerDataset(
-            max_length = max_length,
-            dest_path=root + '/nucleotide_transformer_downstream_tasks',
-            use_padding = use_padding,
-            split = 'train',
-            
-            tokenizer=tokenizer,
-            dataset_name=dataset_name,
-            rc_aug=True,
-            add_eos=add_eos,
-            one_hot=one_hot,
-            quantize=quantize
-        )
-        ds_train = combine_datasets(ds_train, ds_train2)
+    def pad_sequences(sequences, maxlen, padding_value=0):
+      padded_sequences = np.full((len(sequences), maxlen, 5), padding_value)
+    #   padded_sequences = np.full((len(sequences), maxlen, 4), padding_value)
+      for i, seq in enumerate(sequences):
+          length = len(seq)
+          padded_sequences[i, :length] = seq
+      return padded_sequences
 
-    train_loader = DataLoader(ds_train, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=False)
-    test_loader = DataLoader(ds_test, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=False)
+    class NTDataset(Dataset):
+      def __init__(self, sequences, labels, max_length):
+          self.sequences = [one_hot_encode(seq) for seq in sequences]
+          self.sequences = pad_sequences(self.sequences, max_length)
+          self.labels = labels
+
+      def __len__(self):
+          return len(self.sequences)
+
+      def __getitem__(self, idx):
+        #   print(idx)
+          sequence = torch.tensor(self.sequences[idx], dtype=torch.float32).permute(1,0)
+          label = torch.tensor(self.labels[idx], dtype=torch.long)
+          return sequence, label
+
+    train_dataset = load_dataset(
+            "InstaDeepAI/nucleotide_transformer_downstream_tasks",
+            dataset_name,
+            split="train",
+            streaming= False,
+        )
+    test_dataset = load_dataset(
+            "InstaDeepAI/nucleotide_transformer_downstream_tasks",
+            dataset_name,
+            split="test",
+            streaming= False,
+        )
+    # Get training data
+    train_sequences = train_dataset['sequence']
+    train_labels = train_dataset['label']
+
+    if valid_split > 0:
+      # Split the dataset into a training and a validation dataset
+      print('Split the train dataset into a training and a validation dataset')
+      train_sequences, validation_sequences, train_labels, validation_labels = train_test_split(train_sequences, train_labels, test_size=0.1, random_state=42)
+
+    # Get test data
+    test_sequences = test_dataset['sequence']
+    test_labels = test_dataset['label']
+
+    # Create datasets
+    train_dataset = NTDataset(train_sequences, train_labels, max_length)
+    test_dataset = NTDataset(test_sequences, test_labels, max_length)
+
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+    if valid_split > 0:
+      validation_dataset = NTDataset(validation_sequences, validation_labels, max_length)
+      valid_loader = DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
+      return train_loader, valid_loader, test_loader
+
     return train_loader, None, test_loader
+
 
 from PIL import Image
 

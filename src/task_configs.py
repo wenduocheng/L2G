@@ -296,7 +296,7 @@ def get_metric(root, dataset):
         # return pcc, np.max
 
     if dataset == "deepstarr_dev" or dataset == "deepstarr_hk":
-        return inverse_score(pcc), np.max
+        return pcc, np.max
 
 
 def get_optimizer(name, params):

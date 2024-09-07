@@ -40,7 +40,7 @@ hyperparameters:
     use_wandb: True
     wandb_key: "ef4b923327eb2a110fda334efee4ec80feee4bc7" # add your own wandb key
     data_parallel: False
-    quantize: False
+    quantize: True
 
     embedder_type: "resnet" # dash-->resnet, unet, dash random
     embedder_init: "random" # random, pretrained
@@ -51,7 +51,7 @@ hyperparameters:
 
 
     
-    batch_size: 64
+    batch_size: 32
     eval_batch_size: 1000
     accum: 1
     clip: 1 

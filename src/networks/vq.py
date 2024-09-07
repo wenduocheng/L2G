@@ -272,7 +272,7 @@ class Swish(nn.Module):
     def forward(self, x):
         return x * torch.sigmoid(x)
 
-
+# https://github.com/CompVis/taming-transformers/blob/master/taming/modules/diffusionmodules/model.py
 class Encoder(nn.Module):
     """
     Encoder of VQ-GAN to map input batch of images to latent space.

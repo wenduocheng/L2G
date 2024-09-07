@@ -4,6 +4,7 @@ results
 dash_results
 results_acc
 run_scripts 
+analysis
 DASH/__pycache__
 DASH/redundant
 __pycache__
@@ -17,5 +18,10 @@ HyenaDNA
 *.err
 *.out
 *.nfs*
-
-
+*.pdf
+*.txt
+jupyter*
+*.ipynb
+*.png
+src/CNN_dashed_dreams.py
+wandb
