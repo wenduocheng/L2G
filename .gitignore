@@ -24,4 +24,5 @@ jupyter*
 *.ipynb
 *.png
 src/CNN_dashed_dreams.py
+.ipynb_checkpoints/
 wandb

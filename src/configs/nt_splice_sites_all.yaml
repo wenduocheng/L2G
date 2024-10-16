@@ -10,7 +10,7 @@ hyperparameters:
     maxsamples: 256 #512
     target_seq_len: 128 #256 #512
 
-    experiment_id: 3 #
+    experiment_id: 4 #
 
     seed: 0
     epochs: 25 #25

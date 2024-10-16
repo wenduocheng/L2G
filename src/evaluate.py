@@ -27,12 +27,14 @@ torch.cuda.manual_seed_all(0)
 
 model_name = 'ORCA' # DeepSEA, DeepSEA_FULL, DeepSEA_Original, DASH_FULL_0, DASH_FULL_1, ORCA
 dataset = 'deepstarr' # DeepSEA_FULL, DeepSEA_NAS
-exp_id = '14'
+exp_id = '16' # '16'
 if model_name == 'ORCA':
     trained_pth = './results/' + dataset + '/all_' + exp_id + '/0/state_dict.pt'
 
     trained = torch.load(trained_pth, map_location=DEVICE)
     args = np.load('./results/' + dataset + '/all_' + exp_id + '/0/hparams.npy', allow_pickle=True).item()
+
+
     print(args)
     args= AttrDict(args)
     # args.channels=[16, 16, 16, 32, 64, 64]

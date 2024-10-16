@@ -408,13 +408,24 @@ def get_optimizer_scheduler(args, model, module=None, n_train=1):
 
         # return args, model, embedder_optimizer, embedder_scheduler
     
+        if hasattr(args,'embedder_optimizer'):
+            embedder_optimizer_params = copy.deepcopy(args.embedder_optimizer.params)
+        
+            params_to_update = get_params_to_update(model, "") #
+            embedder_optimizer = get_optimizer(args.embedder_optimizer.name, embedder_optimizer_params)(params_to_update) # 
+            lr_lambda, _ = get_scheduler(args.no_warmup_scheduler.name, args.no_warmup_scheduler.params, args.embedder_epochs, 1)
+            embedder_scheduler = torch.optim.lr_scheduler.LambdaLR(embedder_optimizer, lr_lambda=lr_lambda)
+        else: 
+            lr = 0.01
+        
+            momentum = 0.99
+            weight_decay = 0.0005
+            embedder_optimizer = partial(torch.optim.SGD, lr=lr, momentum=momentum, weight_decay=weight_decay)(get_params_to_update(model, ""))
+            
+            print('embedder optimizer',embedder_optimizer.defaults)
 
-        embedder_optimizer_params = copy.deepcopy(args.embedder_optimizer.params)
-       
-        params_to_update = get_params_to_update(model, "") #
-        embedder_optimizer = get_optimizer(args.embedder_optimizer.name, embedder_optimizer_params)(params_to_update) # 
-        lr_lambda, _ = get_scheduler(args.no_warmup_scheduler.name, args.no_warmup_scheduler.params, args.embedder_epochs, 1)
-        embedder_scheduler = torch.optim.lr_scheduler.LambdaLR(embedder_optimizer, lr_lambda=lr_lambda)
+            lr_lambda, _ = get_scheduler(args.no_warmup_scheduler.name, args.no_warmup_scheduler.params, args.embedder_epochs, 1)
+            embedder_scheduler = torch.optim.lr_scheduler.LambdaLR(embedder_optimizer, lr_lambda=lr_lambda)
 
         return args, model, embedder_optimizer, embedder_scheduler
     

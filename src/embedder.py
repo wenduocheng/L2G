@@ -6,7 +6,7 @@ import math
 from torch.utils.data import Dataset, IterableDataset, DataLoader
 from timeit import default_timer
 from functools import partial
-from transformers import AutoModel, AutoConfig, SwinForImageClassification, SwinForMaskedImageModeling, RobertaForTokenClassification, AutoTokenizer, DataCollatorWithPadding
+from transformers import AutoModel, AutoConfig, SwinForImageClassification, SwinForMaskedImageModeling, RobertaForTokenClassification, AutoTokenizer, DataCollatorWithPadding, DataCollatorForTokenClassification
 from transformers.models.roberta.modeling_roberta import RobertaLayer
 from otdd.pytorch.distance import DatasetDistance, FeatureCost
 import copy
@@ -326,21 +326,29 @@ class Embeddings1D(nn.Module):
                 conv_init(self.projection)
 
                 channels= args.channels if hasattr(args,'channels') else [16,32,64]
+                try:
+                    ks=args.ks 
+                    ds=args.ds
+                except: # use default kernel sizes and dilation sizes
+                    ks=[3] * 18
+                    ds[1] * 18
                 self.fno = Encoder_v2(input_shape[1],channels=channels,dropout=args.drop_out,f_channel=input_shape[-1],num_class=output_shape,ks=None,ds=None,downsample=downsample,seqlen=input_shape[-1]) 
    
                 self.fno.apply(conv_init)
             else: # use default ResNet architecture
                 in_channel=input_shape[-2]
                 num_classes=output_shape
-                mid_channels=min(4 ** (num_classes // 10 + 1), 64)
-                # mid_channels = 128
+                # mid_channels=min(4 ** (num_classes // 10 + 1), 64)
+                mid_channels = 128
                 dropout=0
                 try:
                     ks=args.ks 
                     ds=args.ds
                 except: # use default kernel sizes and dilation sizes
-                    ks=[15, 19, 19, 7, 7, 7, 19, 19, 19]
-                    ds=[1, 15, 15, 1, 1, 1, 15, 15, 15]
+                    # ks=[15, 19, 19, 7, 7, 7, 19, 19, 19]
+                    # ds=[1, 15, 15, 1, 1, 1, 15, 15, 15]
+                    ks=[3, 3, 3, 3, 3, 3, 3, 3, 3]
+                    ds=[1, 1, 1, 1, 1, 1, 1, 1, 1]
                 activation=None
                 remain_shape=False
                 self.dash = ResNet1D_v3(in_channels = in_channel, mid_channels=mid_channels, num_pred_classes=num_classes, dropout_rate=dropout, ks = [15, 19, 19, 7, 7, 7, 19, 19, 19], ds = [1, 15, 15, 1, 1, 1, 15, 15, 15], activation=activation, remain_shape=remain_shape, input_shape=input_shape, embed_dim=embed_dim)
@@ -360,8 +368,8 @@ class Embeddings1D(nn.Module):
                 # resnet
                 in_channel=input_shape[-2]
                 num_classes=output_shape
-                mid_channels=min(4 ** (num_classes // 10 + 1), 64)
-                # mid_channels=128
+                # mid_channels=min(4 ** (num_classes // 10 + 1), 64)
+                mid_channels=128
                 dropout=0
                 activation=None
                 remain_shape=False
@@ -409,7 +417,7 @@ class Embeddings1D(nn.Module):
                     self.embedder_type = 'unet'
                 print('Backbone selection: ', self.embedder_type)
                 
-
+            self.embedder_type = 'resnet'
             # optimization
             if self.embedder_type == 'resnet':
                 in_channel=input_shape[-2]
@@ -540,53 +548,197 @@ def get_tgt_model(args, root, sample_shape, num_classes, loss, add_loss=False, u
     #     src_train_dataset = torch.utils.data.TensorDataset(src_feats, src_ys)
     
     # generate source data (text)
-    def get_src_feats(weight='roberta'):
-        trainset = load_dataset("conll2003",split='validation')
-        trainset = trainset.select_columns(['tokens'])
-        if args.weight == 'roberta-large':
-            tokenizer = AutoTokenizer.from_pretrained("roberta-large")
-        elif args.weight == 'roberta':
-            tokenizer = AutoTokenizer.from_pretrained("roberta-base")
-        def preprocess_function(examples):
-            examples["strs"] = ["".join(toks) for toks in examples["tokens"]]
-            examples["input_ids"] = tokenizer(examples["strs"])['input_ids']
-            del examples['tokens']
-            del examples['strs']
-            return examples
-        trainset = trainset.map(preprocess_function, batched=True)
-        data_collator = DataCollatorWithPadding(tokenizer)
-        src_train_loader = DataLoader(trainset, batch_size=32,collate_fn=data_collator)
-        src_model = wrapper1D(sample_shape, num_classes, use_embedder=False, weight=args.weight, train_epoch=args.embedder_epochs, activation=args.activation, drop_out=args.drop_out, args=args)
-        src_model = src_model.to(args.device).eval()
-        src_model.output_raw = "src"
-        src_feats = []
-        src_ys = []
-        for i, data in enumerate(src_train_loader):
-            # print(data)
-            # print(data.keys())
-            #x_ = data['tokens']
-            x_ = data['input_ids']
-            # print(x_)
-            x_ = x_.to(args.device)
-            # y_ = x_
-            out = src_model(x_)
-            #print(out.shape)
-            if len(out.shape) > 2:
-                out = out.mean(1)
-                # src_ys.append(y_.detach().cpu())
-            src_feats.append(out.detach().cpu())
-            #src_feats = torch.cat(src_feats, 0)
-            if len(src_feats)>5000:
-                break
-        # src_ys = torch.cat(src_ys, 0).long()
-        src_feats = torch.cat(src_feats, 0)
-        # src_train_dataset = torch.utils.data.TensorDataset(src_feats, src_feats)        
-        del src_model, src_train_loader, trainset 
-        torch.cuda.empty_cache() 
-        src_ys = None
-        return src_feats, src_ys
 
-    src_feats, src_ys = get_src_feats()
+    # def get_src_feats(weight='roberta'):
+    #     trainset = load_dataset("conll2003",split='validation')
+    #     trainset = trainset.select_columns(['tokens'])
+    #     if args.weight == 'roberta-large':
+    #         tokenizer = AutoTokenizer.from_pretrained("roberta-large")
+    #     elif args.weight == 'roberta':
+    #         tokenizer = AutoTokenizer.from_pretrained("roberta-base")
+    #     def preprocess_function(examples):
+    #         examples["strs"] = ["".join(toks) for toks in examples["tokens"]]
+    #         examples["input_ids"] = tokenizer(examples["strs"])['input_ids']
+    #         del examples['tokens']
+    #         del examples['strs']
+    #         return examples
+    #     trainset = trainset.map(preprocess_function, batched=True)
+    #     data_collator = DataCollatorWithPadding(tokenizer)
+    #     src_train_loader = DataLoader(trainset, batch_size=32,collate_fn=data_collator)
+    #     src_model = wrapper1D(sample_shape, num_classes, use_embedder=False, weight=args.weight, train_epoch=args.embedder_epochs, activation=args.activation, drop_out=args.drop_out, args=args)
+    #     src_model = src_model.to(args.device).eval()
+    #     src_model.output_raw = "src"
+    #     src_feats = []
+    #     src_ys = []
+    #     for i, data in enumerate(src_train_loader):
+    #         # print(data)
+    #         # print(data.keys())
+    #         #x_ = data['tokens']
+    #         x_ = data['input_ids']
+    #         # print(x_)
+    #         x_ = x_.to(args.device)
+    #         # y_ = x_
+    #         out = src_model(x_)
+    #         #print(out.shape)
+    #         if len(out.shape) > 2:
+    #             out = out.mean(1)
+    #             # src_ys.append(y_.detach().cpu())
+    #         src_feats.append(out.detach().cpu())
+    #         #src_feats = torch.cat(src_feats, 0)
+    #         if len(src_feats)>5000:
+    #             break
+    #     # src_ys = torch.cat(src_ys, 0).long()
+    #     src_feats = torch.cat(src_feats, 0)
+    #     # src_train_dataset = torch.utils.data.TensorDataset(src_feats, src_feats)        
+    #     del src_model, src_train_loader, trainset 
+    #     torch.cuda.empty_cache() 
+    #     src_ys = None
+    #     return src_feats, src_ys
+
+    def get_src_feats(weight='roberta'):
+
+        conll2003 = load_dataset("conll2003")
+
+        if weight == 'roberta-large':
+            tokenizer = AutoTokenizer.from_pretrained("roberta-large",add_prefix_space=True,padding=True,truncation=True)
+        elif weight == 'roberta': # base
+            tokenizer = AutoTokenizer.from_pretrained("roberta-base",add_prefix_space=True,padding=True,truncation=True)
+
+        def align_labels_with_tokens(labels, word_ids):
+            # Initialize a list to store the adjusted labels
+            new_labels = []
+        
+            # Initialize a variable to keep track of the current word's ID
+            current_word = None
+        
+            # Iterate through each word ID in the word_ids list
+            for word_id in word_ids:
+                if word_id != current_word:
+                    # Start of a new word/entity
+                    current_word = word_id
+        
+                    # Assign -100 to labels for special tokens, else use the word's label
+                    label = -100 if word_id is None else labels[word_id]
+        
+                    # Append the adjusted label to the new_labels list
+                    new_labels.append(label)
+                elif word_id is None:
+                    # Handle special tokens by assigning them a label of -100
+                    new_labels.append(-100)
+                else:
+                    # Token belongs to the same word/entity as the previous token
+                    label = labels[word_id]
+        
+                    # If the label is in the form B-XXX, change it to I-XXX
+                    if label % 2 == 1:
+                        label += 1
+        
+                    # Append the adjusted label to the new_labels list
+                    new_labels.append(label)
+        
+            # Return the list of adjusted labels
+            return new_labels
+        
+
+        def tokenize_and_align_labels(examples):
+            tokenized_inputs = tokenizer(
+                examples["tokens"], truncation=True, is_split_into_words=True
+            )
+            all_labels = examples["ner_tags"]
+            new_labels = []
+            for i, labels in enumerate(all_labels):
+                word_ids = tokenized_inputs.word_ids(i)
+                new_labels.append(align_labels_with_tokens(labels, word_ids))
+        
+            tokenized_inputs["labels"] = new_labels
+            return tokenized_inputs
+        
+
+        tokenized_datasets = conll2003.map(
+            tokenize_and_align_labels,
+            batched=True,
+            remove_columns=conll2003["train"].column_names,
+        )
+
+        
+        data_collator = DataCollatorForTokenClassification(tokenizer=tokenizer)
+        
+        src_train_loader = torch.utils.data.DataLoader(
+            tokenized_datasets["validation"],
+            shuffle=True,
+            collate_fn=data_collator,
+            batch_size=8,
+        )
+
+
+        src_model = wrapper1D(sample_shape, num_classes, use_embedder=False, weight=args.weight, train_epoch=args.embedder_epochs, activation=args.activation, drop_out=args.drop_out, args=args)
+        
+        src_model = src_model.to(args.device).eval()
+        src_model.output_raw = True 
+
+        
+        src_feats = []
+        src_xs = []
+        src_ys = []
+
+
+        features = []
+        labels = []
+        for batch in src_train_loader:
+            for k, v in batch.items():
+                batch[k] = v.to(args.device)
+            with torch.no_grad():
+                # outputs = trainer.model(**batch)
+                hidden_states = src_model(batch['input_ids'])
+
+                for i in range(hidden_states.size(0)):  # Iterate over batch size
+                    length = (batch['attention_mask'][i] == 1).sum().item()
+                    features.append(hidden_states[i, :length].cpu().numpy())
+                    labels.append(batch['labels'][i, :length].cpu().numpy())
+
+        max_len = max(f.shape[0] for f in features)
+        padded_features = np.array([np.pad(f, ((0, max_len - f.shape[0]), (0, 0)), mode='constant') for f in features])
+        padded_labels = np.array([np.pad(l, (0, max_len - l.shape[0]), mode='constant', constant_values=-100) for l in labels])
+
+        print(padded_features.shape, padded_labels.shape)
+        reshaped_features = padded_features.reshape(-1, padded_features.shape[-1])
+        reshaped_labels = padded_labels.flatten()
+
+        # Filter out -100 labels
+        valid_indices = reshaped_labels != -100
+        filtered_features = reshaped_features[valid_indices]
+        filtered_labels = reshaped_labels[valid_indices]
+        
+        
+        num_samples_per_label = 350
+        selected_features = []
+        selected_labels = []
+        
+        # Randomly select 3000 data points
+        # Randomly select points for each label
+        np.random.seed(42)  # For reproducibility
+        for label in np.unique(filtered_labels):
+            label_indices = np.where(filtered_labels == label)[0]
+            selected_indices = np.random.choice(label_indices, num_samples_per_label, replace=False)
+            selected_features.append(filtered_features[selected_indices])
+            selected_labels.append(filtered_labels[selected_indices])
+        selected_features = np.concatenate(selected_features, axis=0)
+        selected_labels = np.concatenate(selected_labels, axis=0)
+
+        print(selected_features.shape, selected_labels.shape)
+
+        # src_ys = torch.cat(src_ys, 0)
+    
+        # src_feats = torch.cat(src_feats, 0)
+        
+        del src_model, src_train_loader, conll2003
+        torch.cuda.empty_cache() 
+
+        return selected_features, selected_labels
+
+
+
+    src_feats, src_ys = get_src_feats(args.weight)
     print("src feat shape", src_feats.shape)
   
 

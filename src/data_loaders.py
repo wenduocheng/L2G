@@ -721,8 +721,108 @@ def load_genomic_benchmarks(root, batch_size, one_hot = True, valid_split=-1, da
 #     test_loader = DataLoader(ds_test, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=False)
 #     return train_loader, None, test_loader
 
-# def load_nucleotide_transformer(batch_size, one_hot = True, valid_split=-1, dataset_name = 'enhancers'):
-def load_nucleotide_transformer(root, batch_size, one_hot = True, valid_split=True, dataset_name = "enhancers", quantize=False,rc_aug=True, shift_aug=True):
+
+# def load_nucleotide_transformer(root, batch_size, one_hot = True, valid_split=True, dataset_name = "enhancers", quantize=False,rc_aug=True, shift_aug=True):
+#     max_length_dict = {
+#         "enhancers": 200,
+#         "enhancers_types": 200,  # nclass=3
+#         "H3": 500,
+#         "H3K4me1": 500,
+#         "H3K4me2": 500,
+#         "H3K4me3": 500,
+#         "H3K9ac": 500,
+#         "H3K14ac": 500,
+#         "H3K36me3": 500,
+#         "H3K79me3": 500,
+#         "H4": 500,
+#         "H4ac": 500,
+#         "promoter_all": 300,
+#         "promoter_no_tata": 300,
+#         "promoter_tata": 300,
+#         "splice_sites_acceptors": 600,
+#         "splice_sites_donors": 600,
+#         "splice_sites_all": 600
+#     }
+
+#     max_length = max_length_dict.get(dataset_name)
+                        
+#     def one_hot_encode(sequence):
+#       mapping = {'A': [1, 0, 0, 0, 0],
+#                 'C': [0, 1, 0, 0, 0],
+#                 'G': [0, 0, 1, 0, 0],
+#                 'T': [0, 0, 0, 1, 0],
+#                 'N': [0, 0, 0, 0, 1]}
+#     #   mapping = {'A': [1, 0, 0, 0],
+#     #             'C': [0, 1, 0, 0],
+#     #             'G': [0, 0, 1, 0],
+#     #             'T': [0, 0, 0, 1],
+#     #             'N': [0, 0, 0, 0]}
+#       return np.array([mapping[base] for base in sequence])
+
+#     def pad_sequences(sequences, maxlen, padding_value=0):
+#       padded_sequences = np.full((len(sequences), maxlen, 5), padding_value)
+#     #   padded_sequences = np.full((len(sequences), maxlen, 4), padding_value)
+#       for i, seq in enumerate(sequences):
+#           length = len(seq)
+#           padded_sequences[i, :length] = seq
+#       return padded_sequences
+
+#     class NTDataset(Dataset):
+#       def __init__(self, sequences, labels, max_length):
+#           self.sequences = [one_hot_encode(seq) for seq in sequences]
+#           self.sequences = pad_sequences(self.sequences, max_length)
+#           self.labels = labels
+
+#       def __len__(self):
+#           return len(self.sequences)
+
+#       def __getitem__(self, idx):
+#         #   print(idx)
+#           sequence = torch.tensor(self.sequences[idx], dtype=torch.float32).permute(1,0)
+#           label = torch.tensor(self.labels[idx], dtype=torch.long)
+#           return sequence, label
+
+#     train_dataset = load_dataset(
+#             "InstaDeepAI/nucleotide_transformer_downstream_tasks",
+#             dataset_name,
+#             split="train",
+#             streaming= False,
+#         )
+#     test_dataset = load_dataset(
+#             "InstaDeepAI/nucleotide_transformer_downstream_tasks",
+#             dataset_name,
+#             split="test",
+#             streaming= False,
+#         )
+#     # Get training data
+#     train_sequences = train_dataset['sequence']
+#     train_labels = train_dataset['label']
+
+#     if valid_split > 0:
+#       # Split the dataset into a training and a validation dataset
+#       print('Split the train dataset into a training and a validation dataset')
+#       train_sequences, validation_sequences, train_labels, validation_labels = train_test_split(train_sequences, train_labels, test_size=0.1, random_state=42)
+
+#     # Get test data
+#     test_sequences = test_dataset['sequence']
+#     test_labels = test_dataset['label']
+
+#     # Create datasets
+#     train_dataset = NTDataset(train_sequences, train_labels, max_length)
+#     test_dataset = NTDataset(test_sequences, test_labels, max_length)
+
+#     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+#     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+#     if valid_split > 0:
+#       validation_dataset = NTDataset(validation_sequences, validation_labels, max_length)
+#       valid_loader = DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
+#       return train_loader, valid_loader, test_loader
+
+#     return train_loader, None, test_loader
+
+
+def load_nucleotide_transformer(root, batch_size, one_hot=True, valid_split=True, dataset_name="enhancers", quantize=False, rc_aug=False, shift_aug=False):
     max_length_dict = {
         "enhancers": 200,
         "enhancers_types": 200,  # nclass=3
@@ -745,79 +845,116 @@ def load_nucleotide_transformer(root, batch_size, one_hot = True, valid_split=Tr
     }
 
     max_length = max_length_dict.get(dataset_name)
-                        
+    
+    complement_mapping = {'A': 'T', 'T': 'A', 'C': 'G', 'G': 'C', 'N': 'N'}
+    
+    def reverse_complement(sequence):
+        return ''.join([complement_mapping[base] for base in sequence[::-1]])
+
+    def shift_sequence(sequence, shift_amount):
+        shift_amount = shift_amount % len(sequence)  # Ensure the shift is within sequence length
+        return sequence[-shift_amount:] + sequence[:-shift_amount]
+
     def one_hot_encode(sequence):
-      mapping = {'A': [1, 0, 0, 0, 0],
-                'C': [0, 1, 0, 0, 0],
-                'G': [0, 0, 1, 0, 0],
-                'T': [0, 0, 0, 1, 0],
-                'N': [0, 0, 0, 0, 1]}
-    #   mapping = {'A': [1, 0, 0, 0],
-    #             'C': [0, 1, 0, 0],
-    #             'G': [0, 0, 1, 0],
-    #             'T': [0, 0, 0, 1],
-    #             'N': [0, 0, 0, 0]}
-      return np.array([mapping[base] for base in sequence])
+        mapping = {'A': [1, 0, 0, 0, 0],
+                   'C': [0, 1, 0, 0, 0],
+                   'G': [0, 0, 1, 0, 0],
+                   'T': [0, 0, 0, 1, 0],
+                   'N': [0, 0, 0, 0, 1]}
+        return np.array([mapping[base] for base in sequence])
 
     def pad_sequences(sequences, maxlen, padding_value=0):
-      padded_sequences = np.full((len(sequences), maxlen, 5), padding_value)
-    #   padded_sequences = np.full((len(sequences), maxlen, 4), padding_value)
-      for i, seq in enumerate(sequences):
-          length = len(seq)
-          padded_sequences[i, :length] = seq
-      return padded_sequences
+        padded_sequences = np.full((len(sequences), maxlen, 5), padding_value)
+        for i, seq in enumerate(sequences):
+            length = len(seq)
+            padded_sequences[i, :length] = seq
+        return padded_sequences
 
     class NTDataset(Dataset):
-      def __init__(self, sequences, labels, max_length):
-          self.sequences = [one_hot_encode(seq) for seq in sequences]
-          self.sequences = pad_sequences(self.sequences, max_length)
-          self.labels = labels
+        def __init__(self, sequences, labels, max_length, rc_aug=False, shift_aug=False):
+            self.sequences = sequences
+            self.labels = labels
+            self.max_length = max_length
+            self.rc_aug = rc_aug
+            self.shift_aug = shift_aug
+            
+            # Augment and preprocess sequences
+            self.processed_sequences, self.processed_labels = self.augment_data()
 
-      def __len__(self):
-          return len(self.sequences)
+        def augment_data(self):
+            augmented_sequences = []
+            augmented_labels = []
+            
+            for i, sequence in enumerate(self.sequences):
+                # Add original sequence and label
+                augmented_sequences.append(self.preprocess(sequence))
+                augmented_labels.append(self.labels[i])
 
-      def __getitem__(self, idx):
-        #   print(idx)
-          sequence = torch.tensor(self.sequences[idx], dtype=torch.float32).permute(1,0)
-          label = torch.tensor(self.labels[idx], dtype=torch.long)
-          return sequence, label
+                # Reverse complement augmentation
+                if self.rc_aug:
+                    rc_sequence = reverse_complement(sequence)
+                    augmented_sequences.append(self.preprocess(rc_sequence))
+                    augmented_labels.append(self.labels[i])
 
+                # Shift augmentation
+                if self.shift_aug:
+                    for shift_amount in range(3):  # Shifting 1-3 bases
+                        shifted_sequence = shift_sequence(sequence, shift_amount)
+                        augmented_sequences.append(self.preprocess(shifted_sequence))
+                        augmented_labels.append(self.labels[i])
+            
+            return augmented_sequences, augmented_labels
+
+        def preprocess(self, sequence):
+            # One-hot encoding and padding
+            return pad_sequences([one_hot_encode(sequence)], self.max_length)[0]
+
+        def __len__(self):
+            return len(self.processed_sequences)
+
+        def __getitem__(self, idx):
+            sequence = torch.tensor(self.processed_sequences[idx], dtype=torch.float32).permute(1, 0)
+            label = torch.tensor(self.processed_labels[idx], dtype=torch.long)
+            return sequence, label
+
+    # Load dataset
     train_dataset = load_dataset(
-            "InstaDeepAI/nucleotide_transformer_downstream_tasks",
-            dataset_name,
-            split="train",
-            streaming= False,
-        )
+        "InstaDeepAI/nucleotide_transformer_downstream_tasks",
+        dataset_name,
+        split="train",
+        streaming=False,
+    )
     test_dataset = load_dataset(
-            "InstaDeepAI/nucleotide_transformer_downstream_tasks",
-            dataset_name,
-            split="test",
-            streaming= False,
-        )
+        "InstaDeepAI/nucleotide_transformer_downstream_tasks",
+        dataset_name,
+        split="test",
+        streaming=False,
+    )
+
     # Get training data
     train_sequences = train_dataset['sequence']
     train_labels = train_dataset['label']
 
-    if valid_split > 0:
-      # Split the dataset into a training and a validation dataset
-      print('Split the train dataset into a training and a validation dataset')
-      train_sequences, validation_sequences, train_labels, validation_labels = train_test_split(train_sequences, train_labels, test_size=0.1, random_state=42)
+    if valid_split > 0 or  valid_split==True:
+        # Split the dataset into a training and a validation dataset
+        print('Split the train dataset into a training and a validation dataset')
+        train_sequences, validation_sequences, train_labels, validation_labels = train_test_split(train_sequences, train_labels, test_size=0.1, random_state=42)
 
     # Get test data
     test_sequences = test_dataset['sequence']
     test_labels = test_dataset['label']
 
     # Create datasets
-    train_dataset = NTDataset(train_sequences, train_labels, max_length)
+    train_dataset = NTDataset(train_sequences, train_labels, max_length, rc_aug=rc_aug, shift_aug=shift_aug)
     test_dataset = NTDataset(test_sequences, test_labels, max_length)
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
     if valid_split > 0:
-      validation_dataset = NTDataset(validation_sequences, validation_labels, max_length)
-      valid_loader = DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
-      return train_loader, valid_loader, test_loader
+        validation_dataset = NTDataset(validation_sequences, validation_labels, max_length)
+        valid_loader = DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
+        return train_loader, valid_loader, test_loader
 
     return train_loader, None, test_loader
 
