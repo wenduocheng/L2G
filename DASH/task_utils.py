@@ -7,12 +7,37 @@ from sklearn import metrics
 import operator
 from itertools import product
 from functools import reduce, partial
-import sys 
-sys.path.append('./')
-from src.data_loaders import load_list
+from data_loaders import load_list
 
 
 """Customized Task Metrics"""
+
+from sklearn.metrics import average_precision_score
+
+def mcc(output, target):
+    # Convert PyTorch tensors to numpy arrays
+    target = target.cpu().detach().numpy()
+    output = np.argmax(output.cpu().detach().numpy(), axis=1)
+    return np.float64(metrics.matthews_corrcoef(output, target))
+
+def mean_average_precision2(preds, target):
+    score = average_precision_score(target.cpu(), torch.sigmoid(preds).detach().cpu(), average='micro') * 100.0
+    return score
+
+def mean_average_precision1(preds, target):
+    # Compute the average precision for each class
+    # pred: (batch_size, numclasses)
+    # target: (batch_size, numclasses)
+    # return: mAP
+    preds = preds.detach().cpu()
+    target = target.detach().cpu()
+    num_classes = target.shape[1]
+    aps = []
+    for i in range(num_classes):
+        ap = average_precision_score(target[:, i], preds[:, i])
+        aps.append(ap)
+    aps = torch.tensor(aps)
+    return aps.mean()
 
 def fnr(output, target):
     metric = maskMetric(output.squeeze().detach().cpu().numpy() > 0.5, target.squeeze().cpu().numpy())
@@ -188,12 +213,6 @@ def accuracy(output, target, topk=(1,)):
     res = res[0] if len(res) == 1 else res
     return res
 
-def mcc(output, target):
-    # Convert PyTorch tensors to numpy arrays
-    target = target.cpu().detach().numpy()
-    output = np.argmax(output.cpu().detach().numpy(), axis=1)
-
-    return np.float64(metrics.matthews_corrcoef(output, target))
 
 def accuracy_onehot(output, target, topk=(1,)):
     """Computes the precision@k for the specified values of k"""
@@ -421,4 +440,22 @@ def print_grad(model, kernel_choices, dilation_choices):
 
 def mask(img, ignore):
     return img * (1 - ignore)
+
+class BCEWithLogitsLoss(torch.nn.Module):
+    def __init__(self, label_smoothing=0.0, reduction='mean', pos_weight=None):
+        super(BCEWithLogitsLoss, self).__init__()
+        assert 0 <= label_smoothing < 1, "label_smoothing value must be between 0 and 1."
+        self.label_smoothing = label_smoothing
+        self.reduction = reduction
+        self.bce_with_logits = torch.nn.BCEWithLogitsLoss(reduction=reduction, pos_weight=pos_weight)
+
+    def forward(self, input, target):
+        if self.label_smoothing > 0:
+            positive_smoothed_labels = 1.0 - self.label_smoothing
+            negative_smoothed_labels = self.label_smoothing
+            target = target * positive_smoothed_labels + \
+                (1 - target) * negative_smoothed_labels
+
+        loss = self.bce_with_logits(input, target)
+        return loss
 

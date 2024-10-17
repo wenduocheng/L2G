@@ -19,6 +19,7 @@ from src.task_configs import get_data, get_optimizer_scheduler, get_config, get_
 from src.utils import conv_init, embedder_init, embedder_placeholder, adaptive_pooler, to_2tuple, set_grad_state, create_position_ids_from_inputs_embeds, l2, MMD_loss, get_params_to_update 
 from src.networks.wrn1d import ResNet1D, ResNet1D_v2, ResNet1D_v3
 from src.networks.vq import Encoder, Encoder_v2
+from src.networks.unet1d import UNet1D
 
  
 
@@ -190,19 +191,24 @@ class wrapper1D(torch.nn.Module):
             self.predictor = nn.Linear(in_features=4096, out_features=output_shape)
         elif weight == 'roberta' or weight == 'roberta-large':  # roberta
             self.model.embeddings = embedder_placeholder()
+        
             if self.dense:
                 self.model.pooler = nn.Identity()
                 self.predictor = adaptive_pooler(out_channel = output_shape[-2] * self.embedder.stack_num, output_shape=output_shape, dense=True)
+                
             else:
+              
                 self.model.pooler = adaptive_pooler()
                 if weight == 'roberta-large':
                     self.predictor = nn.Linear(in_features=1024, out_features=output_shape)
                 else: # roberta base
+                
                     if use_embedder:
-                        if args.embedder_type == 'resnet' or args.embedder_type == 'unet':
+                        if args.embedder_type == 'resnet' or args.embedder_type == 'unet' or args.embedder_type == 'vq':
                             # if (args.dataset == 'DEEPSEA' or args.dataset == 'DEEPSEA_FULL'):
                             #     self.predictor = nn.Linear(in_features=384000, out_features=output_shape)
                             # else:
+                    
                                 self.predictor = nn.Linear(in_features=768, out_features=output_shape)
                         else:
                             if (args.dataset == 'DEEPSEA' or args.dataset == 'DEEPSEA_FULL') and args.embedder_type == 'resnet':
@@ -210,6 +216,7 @@ class wrapper1D(torch.nn.Module):
                                 self.predictor = nn.Linear(in_features=768*input_shape[-1]//self.embedder.stack_num, out_features=output_shape)
                             else:
                                 self.predictor = nn.Linear(in_features=768*input_shape[-1]//self.embedder.stack_num, out_features=output_shape) 
+                        # self.predictor = nn.Linear(in_features=768, out_features=output_shape)
                     else:
                         self.predictor = nn.Identity()
                 conv_init(self.predictor)
@@ -249,7 +256,7 @@ class wrapper1D(torch.nn.Module):
             # else:
             #     x = self.embedder(x)
             x, fno = self.embedder(x)
-
+            # print('259',x.shape,fno.shape)
             if self.dense:
                 x = self.model(inputs_embeds=x)['last_hidden_state']
                 x = self.predictor(x)
@@ -321,6 +328,20 @@ class Embeddings1D(nn.Module):
         
         if not args.run_dash:
             if self.embedder_type == 'unet':
+                in_channel=input_shape[-2]
+                num_classes=output_shape
+                try:
+                    ks=args.ks 
+                    ds=args.ds
+                except: # use default kernel sizes and dilation sizes
+                    ks=[3] * 18
+                    ds=[1] * 18
+                self.dash = UNet1D(n_channels=in_channel, num_classes=num_classes, ks=ks, ds=ds)
+
+                self.projection = nn.Conv1d(64, embed_dim, kernel_size=self.stack_num, stride=self.stack_num) 
+                downsample = False
+                conv_init(self.projection)
+            elif self.embedder_type == 'vq':
                 self.projection = nn.Conv1d(128, embed_dim, kernel_size=self.stack_num, stride=self.stack_num) 
                 downsample = False
                 conv_init(self.projection)
@@ -331,11 +352,11 @@ class Embeddings1D(nn.Module):
                     ds=args.ds
                 except: # use default kernel sizes and dilation sizes
                     ks=[3] * 18
-                    ds[1] * 18
+                    ds=[1] * 18
                 self.fno = Encoder_v2(input_shape[1],channels=channels,dropout=args.drop_out,f_channel=input_shape[-1],num_class=output_shape,ks=None,ds=None,downsample=downsample,seqlen=input_shape[-1]) 
    
                 self.fno.apply(conv_init)
-            else: # use default ResNet architecture
+            elif self.embedder_type == 'resnet': # use default ResNet architecture
                 in_channel=input_shape[-2]
                 num_classes=output_shape
                 # mid_channels=min(4 ** (num_classes // 10 + 1), 64)
@@ -398,9 +419,12 @@ class Embeddings1D(nn.Module):
                 del model, optimizer, scheduler
 
                 # unet
-                channels= args.channels if hasattr(args,'channels') else [16,32,64]
-                downsample = False
-                model = Encoder_v2(input_shape[1],channels=channels,dropout=args.drop_out,f_channel=input_shape[-1],num_class=output_shape,ks=None,ds=None,downsample=downsample,seqlen=input_shape[-1]).to(args.device)
+                # channels= args.channels if hasattr(args,'channels') else [16,32,64]
+                # downsample = False
+                # model = Encoder_v2(input_shape[1],channels=channels,dropout=args.drop_out,f_channel=input_shape[-1],num_class=output_shape,ks=None,ds=None,downsample=downsample,seqlen=input_shape[-1]).to(args.device)
+                ks=None
+                ds=None
+                model = UNet1D(n_channels=in_channel, num_classes=num_classes, ks=ks, ds=ds).to(args.device)
                 if args.quantize == True:
                     model=model.bfloat16() 
                 optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0005)
@@ -423,14 +447,14 @@ class Embeddings1D(nn.Module):
                 in_channel=input_shape[-2]
     
                 num_classes=output_shape
-                mid_channels=min(4 ** (num_classes // 10 + 1), 64)
-                # mid_channels=128
+                # mid_channels=min(4 ** (num_classes // 10 + 1), 64)
+                mid_channels=128
                 dropout=0
                 if args.run_dash:
-                    dash_result_path = f"./dash_results/{args.dataset}/wrn/wrn/{args.seed}/dash_final_results.npy"
+                    dash_result_path = f"./dash_results/results_acc/{args.dataset}/search_init/wrn/{args.seed}/dash_final_results.npy"
                     if not os.path.exists(dash_result_path):
                         print('Start to run DASH!')
-                        subprocess.run(f"python -W ignore ./DASH/main.py --dataset {args.dataset} --arch wrn --experiment_id wrn --seed {args.seed} --valid_split 0", shell=True, check=True)
+                        subprocess.run(f"python -W ignore ./DASH/search_init.py --dataset {args.dataset} --arch wrn --experiment_id wrn --seed {args.seed} --valid_split 0 --save_dir '/home/wenduoc/ORCA/L2G/dash_results/' ", shell=True, check=True)
                         print('DASH Finish!')
                     else:
                         print('Found existing DASH results!')
@@ -441,6 +465,8 @@ class Embeddings1D(nn.Module):
                     print(dash_results)
                     ks = dash_results['ks']
                     ds = dash_results['ds']
+                    args.ks =ks
+                    args.ds =ds
                     dropout = dash_results['drop out']
                     args.embedder_optimizer.params.lr = dash_results['lr']
                     args.embedder_optimizer.params.weight_decay = dash_results['weight decay']
@@ -448,35 +474,46 @@ class Embeddings1D(nn.Module):
                     print('DASH result:', dash_results['test best score'])
                     
                 else:
-                    ks = args.ks if hasattr(args,'ks') else [15, 19, 19, 7, 7, 7, 19, 19, 19]
-                    ds = args.ds if hasattr(args,'ds') else [1, 15, 15, 1, 1, 1, 15, 15, 15]
+                    ks = args.ks if hasattr(args,'ks') else [3, 3, 3, 3, 3, 3, 3, 3, 3]
+                    ds = args.ds if hasattr(args,'ds') else [1, 1, 1, 1, 1, 1, 1, 1, 1]
                 activation=None
                 remain_shape=False
                 self.dash = ResNet1D_v3(in_channels = in_channel, mid_channels=mid_channels, num_pred_classes=num_classes, dropout_rate=dropout, ks = ks, ds = ds, activation=activation, remain_shape=remain_shape, input_shape=input_shape, embed_dim=embed_dim)
                 # self.dash = ResNet1D_v2(in_channels = in_channel, mid_channels=mid_channels, num_pred_classes=num_classes, dropout_rate=dropout, ks = ks, ds = ds, activation=activation, remain_shape=remain_shape, input_shape=input_shape, embed_dim=embed_dim,target_seq_len=target_seq_len)
-            elif self.embedder_type == 'unet':
+            elif self.embedder_type == 'vq':
                 self.projection = nn.Conv1d(128, embed_dim, kernel_size=self.stack_num, stride=self.stack_num) 
                 downsample = False
                 conv_init(self.projection)
-                if self.embedder_type == 'unet':
-                #     if not args.one_hot: # if not one hot encode
-                #         print(input_shape)
-                #         channels = args.channels if hasattr(args,'channels') else [16,32,64]# [16, 16, 16, 32, 64, 64]
-                #         self.fno = Encoder_v2(embed_dim, channels = channels, dropout=args.drop_out, f_channel=input_shape[-1],num_class=output_shape,ks=None,ds=None,downsample=downsample,seqlen=input_shape[-1]) #ResNet1D(4,128,36,ks=[15,13,11,9,7,5,5,3,3],ds=[32,16,8,4,4,2,2,1,1])# FNO1d()
-                #     else: # one hot encoding + no dna embedding
-                #     print('input shape:',input_shape)
-                    channels= args.channels if hasattr(args,'channels') else [16,32,64]
-                    self.fno = Encoder_v2(input_shape[1],channels=channels,dropout=args.drop_out,f_channel=input_shape[-1],num_class=output_shape,ks=None,ds=None,downsample=downsample,seqlen=input_shape[-1]) 
-                # elif self.embedder_type == 'unet-dash':
-                    # channels=[16,32,64]
-                    # self.fno = Encoder_v2(128,f_channel=input_shape[-1],num_class=output_shape,ks=args.ks,ds=args.ds,downsample=downsample) 
-                # self.dnaemb=nn.Embedding(5,embed_dim) #embed_dim) #16)
-
-                # print(self.dnaemb.weight.data)
-                # nn.init.normal_(self.dnaemb.weight, std=0.02)
-                # print(self.dnaemb.weight.data)
+         
+                channels= args.channels if hasattr(args,'channels') else [16,32,64]
+                self.fno = Encoder_v2(input_shape[1],channels=channels,dropout=args.drop_out,f_channel=input_shape[-1],num_class=output_shape,ks=None,ds=None,downsample=downsample,seqlen=input_shape[-1]) 
+            
 
                 self.fno.apply(conv_init)
+            elif self.embedder_type == 'unet':
+                dash_result_path = f"./dash_results/results_acc/{args.dataset}/search_init/unet/{args.seed}/dash_final_results.npy"
+                if not os.path.exists(dash_result_path):
+                    print('Start to run DASH!')
+                    subprocess.run(f"python -W ignore ./DASH/search_init.py --dataset {args.dataset} --arch unet --experiment_id wrn --seed {args.seed} --valid_split 0 --save_dir '/home/wenduoc/ORCA/L2G/dash_results/' ", shell=True, check=True)
+                    print('DASH Finish!')
+                else:
+                    print('Found existing DASH results!')
+                # Load the results file
+                
+                dash_results = np.load(dash_result_path,allow_pickle=True).item()
+                print(type(dash_results))
+                print(dash_results)
+                ks = dash_results['ks']
+                ds = dash_results['ds']
+                args.ks =ks
+                args.ds =ds
+                dropout = dash_results['drop out']
+                args.embedder_optimizer.params.lr = dash_results['lr']
+                args.embedder_optimizer.params.weight_decay = dash_results['weight decay']
+                args.embedder_optimizer.params.momentum = dash_results['momentum']
+                print('DASH result:', dash_results['test best score'])
+
+                self.dash = UNet1D(n_channels=in_channel, num_classes=num_classes, ks=ks, ds=ds)
 
     def get_stack_num(self, input_len, target_seq_len):
         if self.embed_dim == 768 or self.embed_dim == 1024: # 
@@ -496,12 +533,17 @@ class Embeddings1D(nn.Module):
             x = inputs_embeds
         # b, c, l = x.shape # batch size, channel, length   e.g., human_enhancers_cohn (64,5,500) if one hot encoded
 
+ 
+        if self.embedder_type == 'resnet': # dash resnet
+            xfno,x = self.dash(x, return_embeddings=True)
+        
         if self.embedder_type == 'unet':
+            xfno, x = self.dash(x, return_embeddings=True) # x: (64,128,500)
+            x = self.projection(x)
+        
+        elif self.embedder_type == 'vq':
             xfno, x = self.fno(x, return_embeddings=True) # x: (64,128,500)
             x = self.projection(x) 
- 
-        elif self.embedder_type == 'resnet': # dash resnet
-            xfno,x = self.dash(x, return_embeddings=True)
 
         x = x.transpose(1, 2)
         x = self.norm(x)
@@ -722,8 +764,8 @@ def get_tgt_model(args, root, sample_shape, num_classes, loss, add_loss=False, u
             selected_indices = np.random.choice(label_indices, num_samples_per_label, replace=False)
             selected_features.append(filtered_features[selected_indices])
             selected_labels.append(filtered_labels[selected_indices])
-        selected_features = np.concatenate(selected_features, axis=0)
-        selected_labels = np.concatenate(selected_labels, axis=0)
+        selected_features = torch.from_numpy(np.concatenate(selected_features, axis=0))
+        selected_labels = torch.from_numpy(np.concatenate(selected_labels, axis=0)).long()
 
         print(selected_features.shape, selected_labels.shape)
 

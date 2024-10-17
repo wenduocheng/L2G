@@ -1,7 +1,8 @@
 src/results/*
 # src/datasets/*
 results
-dash_results
+dash_results*
+DASH_old
 results_acc
 run_scripts 
 analysis

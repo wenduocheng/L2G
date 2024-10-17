@@ -101,7 +101,7 @@ class UNet1D(nn.Module):
         self.global_pool = nn.AdaptiveAvgPool1d(1)  # Global average pooling to ensure fixed output size
         self.fc = nn.Linear(64, self.num_classes)  # Fully connected layer for classification
 
-    def forward(self, x):
+    def forward(self, x, return_embeddings=False):
         x1 = self.inc(x)
         x2 = self.down1(x1)
         x3 = self.down2(x2)
@@ -110,11 +110,16 @@ class UNet1D(nn.Module):
         x = self.up1(x5, x4)
         x = self.up2(x, x3)
         x = self.up3(x, x2)
-        x = self.up4(x, x1)
-
-        x = self.global_pool(x)  # Apply global average pooling
+        embeddings = self.up4(x, x1)
+        # print('114',embeddings.shape)
+        x = self.global_pool(embeddings)  # Apply global average pooling
+        # print('116',x.shape)
         x = x.squeeze(-1)  # Remove the last dimension 
+        # print('118',x.shape)
         logits = self.fc(x)   
-        return logits
+        # return logits
 
+        if return_embeddings:
+            return logits, embeddings
+        return logits 
 

@@ -14,8 +14,8 @@ hyperparameters:
 
     seed: 0
     epochs: 25 #25
-    embedder_epochs: 0 
-    pretrain_epochs: 0 
+    embedder_epochs: 100
+    pretrain_epochs: 60 
     predictor_epochs: 0 
 
     joint_optim: True
@@ -23,7 +23,7 @@ hyperparameters:
     beta: 1 # weight for bce
     finetune_method: all
     one_hot: True
-    run_dash: False
+    run_dash: True
     lora_r: 12 # 12
     lora_alpha: 32 # 32
     lora_dropout: 0.1
@@ -32,15 +32,15 @@ hyperparameters:
     drop_out: 0.05
     label_smoothing_factor: 0
     activation: None
-    rc_aug: False # reverse complement augmentation
-    shift_aug: False # shift augmentation
+    rc_aug: True # reverse complement augmentation
+    shift_aug: True # shift augmentation
 
     use_wandb: True
     wandb_key: "ef4b923327eb2a110fda334efee4ec80feee4bc7"
     data_parallel: False
     quantize: False
 
-    embedder_type: "resnet" # dash, unet,dash random
+    embedder_type: "unet" # dash, unet,dash random
     embedder_init: "random"
     # ks: [7, 7, 3, 9, 3, 3, 7, 7, 3]  
     # ds: [1, 1, 1, 1, 1, 5, 1, 1, 1]

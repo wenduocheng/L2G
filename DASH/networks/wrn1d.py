@@ -76,7 +76,9 @@ class ResNet1D(nn.Module):
     """
 
     def __init__(self, in_channels: int, mid_channels: int = 64,
-                 num_pred_classes: int = 1,  dropout_rate: float = 0, activation=None, remain_shape=False, ks=None, ds=None) -> None:
+                 num_pred_classes: int = 1,  dropout_rate: float = 0, activation=None, 
+                 remain_shape=False, ks=None, ds=None,
+                 tokenized=False, num_embeddings=None, embedding_dim=None) -> None:
         super().__init__()
 
         # for easier saving and loading
@@ -85,42 +87,41 @@ class ResNet1D(nn.Module):
             'num_pred_classes': num_pred_classes
         }
 
+        self.tokenized = tokenized
+        if self.tokenized:
+            self.embedding = nn.Embedding(num_embeddings, embedding_dim)
+
         self.layers = nn.Sequential(*[
             ResNetBlock(in_channels=in_channels, out_channels=mid_channels, dropout_rate=dropout_rate,
                 ks=ks[:3] if ks is not None else None, ds=ds[:3] if ds is not None else None),
             ResNetBlock(in_channels=mid_channels, out_channels=mid_channels * 2, dropout_rate=dropout_rate,
                 ks=ks[3:6] if ks is not None else None, ds=ds[3:6] if ds is not None else None),
-            # ResNetBlock(in_channels=mid_channels * 2, out_channels=mid_channels * 2, dropout_rate=dropout_rate,
-            ResNetBlock(in_channels=mid_channels * 2, out_channels=768, dropout_rate=dropout_rate, #
+            ResNetBlock(in_channels=mid_channels * 2, out_channels=mid_channels * 2, dropout_rate=dropout_rate,
                 ks=ks[6:] if ks is not None else None, ds=ds[6:] if ds is not None else None),
+
         ])
-        # self.final = nn.Linear(mid_channels * 2, num_pred_classes)
-        self.final = nn.Linear(768, num_pred_classes)
+        self.final = nn.Linear(mid_channels * 2, num_pred_classes)
         self.activation = activation
         self.remain_shape = remain_shape
-        # print('wrn',ks,len(ks))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:  # type: ignore
-        # x = self.layers(x)
-        # if self.remain_shape:
-        #     x = x.permute(0, 2, 1)
-        # else:
-        #     x = x.mean(dim=-1)
-        # x = self.final(x)
-        # if self.remain_shape:
-        #     x = x.permute(0, 2, 1)
-        # if self.activation == 'softmax':
-        #     return F.log_softmax(x, dim=1)
-        # elif self.activation == 'sigmoid':
-        #     return torch.sigmoid(x)
-        # else:
-        #     return x
+        if self.tokenized:
+            x = self.embedding(x.long().squeeze(1)).transpose(1, 2) # (batch_size, 1, seq_len) --> (batch_size, seq_len) --> (batch_size, seq_len, embedding_dim) --> (batch_size, embedding_dim, seq_len)
 
         x = self.layers(x)
-        x = x.mean(dim=-1)
+        if self.remain_shape:
+            x = x.permute(0, 2, 1)
+        else:
+            x = x.mean(dim=-1)
         x = self.final(x)
-
-        return x
+        if self.remain_shape:
+            x = x.permute(0, 2, 1)
+        if self.activation == 'softmax':
+            return F.log_softmax(x, dim=1)
+        elif self.activation == 'sigmoid':
+            return torch.sigmoid(x)
+        else:
+            return x
 
 
 class ResNetBlock(nn.Module):
