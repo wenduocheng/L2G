@@ -22,8 +22,7 @@ from datasets import load_dataset
 import copy
 import sys 
 sys.path.append('./')
-from src.helper_scripts.genomic_benchmarks_utils import GenomicBenchmarkDataset, CharacterTokenizer, combine_datasets
-# NucleotideTransformerDataset 
+from src.helper_scripts.genomic_benchmarks_utils import GenomicBenchmarkDataset, CharacterTokenizer, combine_datasets, NucleotideTransformerDataset 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
@@ -822,7 +821,7 @@ def load_genomic_benchmarks(root, batch_size, one_hot = True, valid_split=-1, da
 #     return train_loader, None, test_loader
 
 
-def load_nucleotide_transformer(root, batch_size, one_hot=True, valid_split=True, dataset_name="enhancers", quantize=False, rc_aug=False, shift_aug=False):
+def load_nucleotide_transformer(root, batch_size, one_hot=True, valid_split=False, dataset_name="enhancers", quantize=False, rc_aug=False, shift_aug=False):
     max_length_dict = {
         "enhancers": 200,
         "enhancers_types": 200,  # nclass=3
@@ -871,12 +870,13 @@ def load_nucleotide_transformer(root, batch_size, one_hot=True, valid_split=True
         return padded_sequences
 
     class NTDataset(Dataset):
-        def __init__(self, sequences, labels, max_length, rc_aug=False, shift_aug=False):
+        def __init__(self, sequences, labels, max_length, rc_aug=False, shift_aug=False, quantize=quantize):
             self.sequences = sequences
             self.labels = labels
             self.max_length = max_length
             self.rc_aug = rc_aug
             self.shift_aug = shift_aug
+            self.quantize = quantize
             
             # Augment and preprocess sequences
             self.processed_sequences, self.processed_labels = self.augment_data()
@@ -913,7 +913,8 @@ def load_nucleotide_transformer(root, batch_size, one_hot=True, valid_split=True
             return len(self.processed_sequences)
 
         def __getitem__(self, idx):
-            sequence = torch.tensor(self.processed_sequences[idx], dtype=torch.float32).permute(1, 0)
+            dtype = torch.bfloat16 if self.quantize else torch.float32
+            sequence = torch.tensor(self.processed_sequences[idx], dtype=dtype).permute(1, 0)
             label = torch.tensor(self.processed_labels[idx], dtype=torch.long)
             return sequence, label
 
@@ -958,6 +959,70 @@ def load_nucleotide_transformer(root, batch_size, one_hot=True, valid_split=True
 
     return train_loader, None, test_loader
 
+# For test time augmentation
+
+def load_nucleotide_transformer_ttg(root, batch_size, one_hot = True, valid_split=-1, dataset_name = 'enhancers', quantize=False):
+    # Define a dictionary mapping dataset names to max_length
+    max_length_dict = {
+        "enhancers": 200,
+        "enhancers_types": 200,  # nclass=3
+        "H3": 500,
+        "H3K4me1": 500,
+        "H3K4me2": 500,
+        "H3K4me3": 500,
+        "H3K9ac": 500,
+        "H3K14ac": 500,
+        "H3K36me3": 500,
+        "H3K79me3": 500,
+        "H4": 500,
+        "H4ac": 500,
+        "promoter_all": 300,
+        "promoter_no_tata": 300,
+        "promoter_tata": 300,
+        "splice_sites_acceptors": 600,
+        "splice_sites_donors": 600,
+        "splice_sites_all": 400
+    }
+    # Use the dictionary to get max_length
+    max_length = max_length_dict.get(dataset_name)
+    use_padding = True
+    add_eos = False  # add end of sentence token
+    tokenizer = CharacterTokenizer(
+            characters=['A', 'C', 'G', 'T', 'N'],  # add DNA characters, N is uncertain
+            model_max_length=max_length + 2,  # to account for special tokens, like EOS
+            add_special_tokens=False,  # we handle special tokens elsewhere
+            padding_side='left', # since HyenaDNA is causal, we pad on the left
+        )
+
+    ds_test = NucleotideTransformerDataset(
+        max_length = max_length,
+        dest_path = root+ '/nucleotide_transformer_downstream_tasks',
+        use_padding = use_padding,
+        split = 'test',
+        tokenizer=tokenizer,
+        dataset_name=dataset_name,
+        rc_aug=False,
+        add_eos=add_eos,
+        one_hot=one_hot,
+        quantize=quantize
+        )
+    ds_test2 = NucleotideTransformerDataset(
+        max_length = max_length,
+        dest_path = root+ '/nucleotide_transformer_downstream_tasks',
+        use_padding = use_padding,
+        split = 'test',
+        tokenizer=tokenizer,
+        dataset_name=dataset_name,
+        rc_aug=True,
+        add_eos=add_eos,
+        one_hot=one_hot,
+        quantize=quantize
+        )
+        
+    
+    test_loader = DataLoader(ds_test, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=False)
+    test_loader_rc = DataLoader(ds_test2, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=False)
+    return test_loader, test_loader_rc
 
 from PIL import Image
 

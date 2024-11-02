@@ -26,6 +26,8 @@ sys.path.append('./')
 from src.task_configs import get_metric
 
 
+# torch.cuda.set_device(4)
+
 def main():
 
     parser = argparse.ArgumentParser(description='DASH')
@@ -44,7 +46,7 @@ def main():
     parser.add_argument('--reproducibility', type=int, default=0, help='exact reproducibility')
     parser.add_argument('--separable', type=int, default=1, help='use separable conv')
     parser.add_argument('--stream', type=int, default=1, help='use streaming for implementing aggconv')
-    parser.add_argument('--grad_scale', type=int, default=None, help='scale gradient for arch params')
+    parser.add_argument('--grad_scale', type=int, default=None, help='scale gradient for 1 params')
     parser.add_argument('--pool_k', type=int, default=None, help='pooling kernel size')
     parser.add_argument('--retrain_only', action='store_true', help='only retrain with given kernel pattern')
     parser.add_argument('--hp_dir', type=str, default='', help='directory containing hp grid search results')

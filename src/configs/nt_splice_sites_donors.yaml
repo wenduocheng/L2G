@@ -10,7 +10,7 @@ hyperparameters:
     maxsamples: 256 #512
     target_seq_len: 128 #256 #512
 
-    experiment_id: 10
+    experiment_id: 16
 
     seed: 0
     epochs: 25 #25
@@ -23,7 +23,7 @@ hyperparameters:
     beta: 1 # weight for bce
     finetune_method: all
     one_hot: True
-    run_dash: False
+    run_dash: True
     lora_r: 12 # 12
     lora_alpha: 32 # 32
     lora_dropout: 0.1

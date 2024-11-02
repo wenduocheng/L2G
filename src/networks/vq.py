@@ -372,6 +372,7 @@ class Encoder_v2(nn.Module):
         layers.append(nn.Conv1d(channels[-1], z_channels, 3, 1, 1))
         self.model = nn.Sequential(*layers)
         self.final = nn.Linear(z_channels*seqlen,num_class)#f_channel, num_class)
+        self.return_embeddings=True
 
         # self.dnaemb=nn.Embedding(5,1024)
 
@@ -387,7 +388,7 @@ class Encoder_v2(nn.Module):
         # print('387',out.shape)
         out = self.final(out)#.mean(1)
         # print('389',out.shape)
-        if return_embeddings:
+        if return_embeddings and self.return_embeddings:
             return out, x
         else:
             return out

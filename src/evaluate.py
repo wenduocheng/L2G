@@ -9,13 +9,14 @@ from sklearn import metrics
 from utils import count_params, count_trainable_params
 from embedder import get_tgt_model
 from scipy import stats
+from src.utils import binary_f1, mcc, pcc, pcc_deepstarr
 import pandas as pd
 import copy
 
 from src.helper_scripts.genomic_benchmarks_utils import GenomicBenchmarkDataset, CharacterTokenizer, combine_datasets, NucleotideTransformerDataset 
 from torch.utils.data import DataLoader 
 
-# torch.cuda.set_device(0)
+torch.cuda.set_device(4)
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 print("device:", DEVICE)
 
@@ -26,8 +27,8 @@ random.seed(0)
 torch.cuda.manual_seed_all(0)
 
 model_name = 'ORCA' # DeepSEA, DeepSEA_FULL, DeepSEA_Original, DASH_FULL_0, DASH_FULL_1, ORCA
-dataset = 'deepstarr' # DeepSEA_FULL, DeepSEA_NAS
-exp_id = '16' # '16'
+dataset = 'splice_sites_all' # DeepSEA_FULL, DeepSEA_NAS
+exp_id = '5' # '16' # 26
 if model_name == 'ORCA':
     trained_pth = './results/' + dataset + '/all_' + exp_id + '/0/state_dict.pt'
 
@@ -38,8 +39,8 @@ if model_name == 'ORCA':
     print(args)
     args= AttrDict(args)
     # args.channels=[16, 16, 16, 32, 64, 64]
-    args.run_dash = False
-    args.backbone_select = False
+    args.run_dash = True # False
+    args.backbone_select = True
 
 if model_name == "ORCA":
     root = './src/datasets' 
@@ -752,6 +753,8 @@ if dataset == 'deepstarr':
     test_time_end = default_timer()
     print("[test-time augmentation]", "\ttime elapsed:", "%.4f" % (test_time_end - test_time_start), "\ttest loss:", "%.4f" % test_loss, "\tdev pcc:", "%.4f" % test_score1, "\thk pcc:", "%.4f" % test_score2)
 else:
+    # mcc
+    metric = mcc
     test_time_start = default_timer()
     test_loss, test_score = evaluate(args, model, test_loader, loss, metric)
     test_time_end = default_timer()
@@ -767,6 +770,19 @@ else:
     # test_loss, test_score = evaluate3(args, model, test_loader, test_loader2, test_loader3, test_loader4,loss, metric)
     # test_time_end = default_timer()
     # print("[test-time augmentation w shift]", "\ttime elapsed:", "%.4f" % (test_time_end - test_time_start), "\ttest loss:", "%.4f" % test_loss, "\ttest score:", "%.4f" % test_score)
+
+    # f1
+    metric = binary_f1 if dataset != "splice_sites_all" else accuracy
+    test_time_start = default_timer()
+    test_loss, test_score = evaluate(args, model, test_loader, loss, metric)
+    test_time_end = default_timer()
+    print("[test]", "\ttime elapsed:", "%.4f" % (test_time_end - test_time_start), "\ttest loss:", "%.4f" % test_loss, "\ttest score:", "%.4f" % test_score)
+
+    test_time_start = default_timer()
+    test_loss, test_score = evaluate2(args, model, test_loader, test_loader2, loss, metric)
+    test_time_end = default_timer()
+    print("[test-time augmentation]", "\ttime elapsed:", "%.4f" % (test_time_end - test_time_start), "\ttest loss:", "%.4f" % test_loss, "\ttest score:", "%.4f" % test_score)
+
 
 
 

@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from functools import reduce, partial
-
+import os
 # import data loaders, task-specific losses and metrics
 import sys 
 sys.path.append('./')
@@ -409,9 +409,40 @@ def get_optimizer_scheduler(args, model, module=None, n_train=1):
         # return args, model, embedder_optimizer, embedder_scheduler
     
         if hasattr(args,'embedder_optimizer'):
+            if args.run_dash:
+                # for embedder_type in ["wrn", "unet", "deepsea"]:
+                #     try:
+                #         dash_result_path = f"./dash_results/results_acc/{args.dataset}/search_init/{embedder_type}/{args.seed}/dash_final_results.npy"
+                #         print(f"Checking path for embedder architecture: {embedder_type}")
+                #         # If successful, break the loop
+                #         break
+                #     except Exception as e:
+                #         print(f"An error occurred for architecture {embedder_type}: {e}")
+                #         continue
+                for embedder_type in ["unet", "wrn", "deepsea"]:
+                    dash_result_path = f"./dash_results/results_acc/{args.dataset}/search_init/{embedder_type}/{args.seed}/dash_final_results.npy"
+                    print(f"Checking path for embedder architecture: {embedder_type}")
+                    
+                    if os.path.exists(dash_result_path):
+                        print(f"Found DASH results for architecture: {embedder_type}")
+                        # Proceed with further processing if necessary
+                        break  # Exit loop as the file was found
+                    else:
+                        print(f"DASH results not found for architecture: {embedder_type}. Trying the next one.")
+
+                # dash_result_path = f"./dash_results/results_acc/{args.dataset}/search_init/wrn/{args.seed}/dash_final_results.npy"
+                dash_results = np.load(dash_result_path,allow_pickle=True).item()
+                args.embedder_optimizer.params.lr = dash_results['lr']
+                args.embedder_optimizer.params.weight_decay = dash_results['weight decay']
+                args.embedder_optimizer.params.momentum = dash_results['momentum']
+                print('lr: ',dash_results['lr'], 'momentum: ',dash_results['momentum'], 'weight_decay: ',dash_results['weight decay'])
+                print('Load embedder optimizer hps from DASH results!')
+
             embedder_optimizer_params = copy.deepcopy(args.embedder_optimizer.params)
         
             params_to_update = get_params_to_update(model, "") #
+
+            print(embedder_optimizer_params)
             embedder_optimizer = get_optimizer(args.embedder_optimizer.name, embedder_optimizer_params)(params_to_update) # 
             lr_lambda, _ = get_scheduler(args.no_warmup_scheduler.name, args.no_warmup_scheduler.params, args.embedder_epochs, 1)
             embedder_scheduler = torch.optim.lr_scheduler.LambdaLR(embedder_optimizer, lr_lambda=lr_lambda)

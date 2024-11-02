@@ -211,7 +211,7 @@ def get_model(arch, sample_shape, num_classes, config_kwargs, ks = None, ds = No
             else:
                 model = UNet1D(n_channels=in_channel, num_classes=num_classes, ks=ks, ds=ds)
         elif arch == 'deepsea':
-            model = DeepSEA(ks = ks, ds = ds)
+            model = DeepSEA(ks = ks, ds = ds,in_channel=in_channel, num_classes=num_classes)
    
     return model
 
@@ -537,7 +537,8 @@ def get_config(dataset, args=None):
     
     lr, arch_lr = (1e-2, 5e-3) if config_kwargs['remain_shape'] else (0.1, 0.05) 
 
-    if arch_default[:3] == 'wrn':
+    # if arch_default == 'wrn':
+    if args.arch == 'wrn':
         # epochs_default, retrain_epochs = 100, 150
         # epochs_default, retrain_epochs = 100, 100
         epochs_default, retrain_epochs = 80, 10
@@ -610,7 +611,7 @@ def get_config(dataset, args=None):
         def weight_sched_train(epoch):
             return base ** (epoch // 20)
         
-    elif arch_default == 'unet':
+    elif args.arch  == 'unet':
         epochs_default, retrain_epochs = 80, 10 # 100, 200
         retrain_freq = epochs_default
         opt, arch_opt = partial(torch.optim.SGD, momentum=0.9, nesterov=True), partial(torch.optim.SGD, momentum=0.9, nesterov=True)
@@ -682,6 +683,48 @@ def get_config(dataset, args=None):
                 current = decay - step
                 total = decay - warmup
                 return max(current / total, 0)
+            
+    elif args.arch  == 'deepsea':
+        # epochs_default, retrain_epochs = 100, 150
+        # epochs_default, retrain_epochs = 100, 100
+        epochs_default, retrain_epochs = 80, 10
+        retrain_freq = epochs_default
+        opt, arch_opt = partial(torch.optim.SGD, momentum=0.9, nesterov=True), partial(torch.optim.SGD, momentum=0.9, nesterov=True)
+        weight_decay = 5e-4 
+        
+        search_sched = [30, 60, 80]
+        def weight_sched_search(epoch):
+            optim_factor = 0
+            for i in range(len(search_sched)):
+                if epoch > search_sched[len(search_sched) - 1 - i]:
+                    optim_factor = len(search_sched) - i
+                    break
+
+            return math.pow(base, optim_factor)
+
+        if dims == 1:
+            sched = [30, 60, 90, 120, 160]
+        else:
+            sched = [60, 120, 160]
+        
+        def weight_sched_train(epoch):    
+            optim_factor = 0
+            for i in range(len(sched)):
+                if epoch > sched[len(sched) - 1 - i]:
+                    optim_factor = len(sched) - i
+                    break
+                    
+            return math.pow(base, optim_factor)
+        
+        hpo_sched = (np.array(sched)/5).astype(int)
+        def weight_sched_hpo(epoch):
+            optim_factor = 0
+            for i in range(len(hpo_sched)):
+                if epoch > hpo_sched[len(hpo_sched) - 1 - i]:
+                    optim_factor = len(hpo_sched) - i
+                    break
+
+            return math.pow(base, optim_factor)
 
     # arch_opt = ExpGrad
 

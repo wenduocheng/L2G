@@ -10,7 +10,7 @@ hyperparameters:
     maxsamples: 256 #512
     target_seq_len: 512 #256 #512
 
-    experiment_id: 25
+    experiment_id: 32
 
     seed: 0
     epochs: 25 #25
@@ -19,9 +19,9 @@ hyperparameters:
     predictor_epochs: 0 
 
     joint_optim: True
-    alpha: 1 # weight for otdd 
+    alpha: 1 # weight for mmd
     beta: 1 # weight for bce
-    finetune_method: all
+    finetune_method: all # all
     one_hot: True
     run_dash: True
     lora_r: 12 # 12
@@ -40,7 +40,7 @@ hyperparameters:
     data_parallel: False
     quantize: False
 
-    embedder_type: "unet" # dash, unet,dash random
+    embedder_type: "resnet" # dash, unet,dash random
     embedder_init: "random"
     # ks: [7, 7, 3, 9, 3, 3, 7, 7, 3]  
     # ds: [1, 1, 1, 1, 1, 5, 1, 1, 1]

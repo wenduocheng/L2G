@@ -20,7 +20,7 @@ from src.utils import conv_init, embedder_init, embedder_placeholder, adaptive_p
 from src.networks.wrn1d import ResNet1D, ResNet1D_v2, ResNet1D_v3
 from src.networks.vq import Encoder, Encoder_v2
 from src.networks.unet1d import UNet1D
-
+from src.networks.deepsea import DeepSEA
  
 
  
@@ -60,6 +60,7 @@ class wrapper1D(torch.nn.Module):
         self.output_shape = output_shape
         self.use_lora=True if args.finetune_method=='lora' else False
         self.joint_optim = True if hasattr(args,'joint_optim') and args.joint_optim else False
+        from_scratch = True if hasattr(args,'from_scratch') and args.from_scratch  else False
 
         if isinstance(output_shape, tuple):
             self.dense = True
@@ -159,6 +160,8 @@ class wrapper1D(torch.nn.Module):
                 # self.model.load_state_dict(corrected_keys, strict=False)
                 # print(self.model.encoder.layer[0].attention.output.dense.weight)
             if args.finetune_method == 'lora':
+                from peft import get_peft_model, LoraConfig #
+
                 self.use_lora=True
                 peft_config = LoraConfig(task_type="SEQ_CLS", inference_mode=False, r=8, lora_alpha=16, lora_dropout=0.1)
                 self.model = get_peft_model(self.model, peft_config)
@@ -204,19 +207,19 @@ class wrapper1D(torch.nn.Module):
                 else: # roberta base
                 
                     if use_embedder:
-                        if args.embedder_type == 'resnet' or args.embedder_type == 'unet' or args.embedder_type == 'vq':
-                            # if (args.dataset == 'DEEPSEA' or args.dataset == 'DEEPSEA_FULL'):
-                            #     self.predictor = nn.Linear(in_features=384000, out_features=output_shape)
-                            # else:
+                        # if args.embedder_type == 'resnet' or args.embedder_type == 'unet' or args.embedder_type == 'vq':
+                        #     # if (args.dataset == 'DEEPSEA' or args.dataset == 'DEEPSEA_FULL'):
+                        #     #     self.predictor = nn.Linear(in_features=384000, out_features=output_shape)
+                        #     # else:
                     
-                                self.predictor = nn.Linear(in_features=768, out_features=output_shape)
-                        else:
-                            if (args.dataset == 'DEEPSEA' or args.dataset == 'DEEPSEA_FULL') and args.embedder_type == 'resnet':
-                                # self.predictor = nn.Linear(in_features=372480, out_features=output_shape)
-                                self.predictor = nn.Linear(in_features=768*input_shape[-1]//self.embedder.stack_num, out_features=output_shape)
-                            else:
-                                self.predictor = nn.Linear(in_features=768*input_shape[-1]//self.embedder.stack_num, out_features=output_shape) 
-                        # self.predictor = nn.Linear(in_features=768, out_features=output_shape)
+                        #         self.predictor = nn.Linear(in_features=768, out_features=output_shape)
+                        # else:
+                        #     if (args.dataset == 'DEEPSEA' or args.dataset == 'DEEPSEA_FULL') and args.embedder_type == 'resnet':
+                        #         # self.predictor = nn.Linear(in_features=372480, out_features=output_shape)
+                        #         self.predictor = nn.Linear(in_features=768*input_shape[-1]//self.embedder.stack_num, out_features=output_shape)
+                        #     else:
+                        #         self.predictor = nn.Linear(in_features=768*input_shape[-1]//self.embedder.stack_num, out_features=output_shape) 
+                        self.predictor = nn.Linear(in_features=768, out_features=output_shape)
                     else:
                         self.predictor = nn.Identity()
                 conv_init(self.predictor)
@@ -247,15 +250,11 @@ class wrapper1D(torch.nn.Module):
 
     def forward(self, x):
         # if self.weight == 'roberta-large' or self.weight == 'roberta': # roberta
+           
             if self.output_raw:
                 return self.embedder(x) 
 
-            # if self.joint_optim:
-            #     x, _ = self.embedder(x)
-            #     # print('266', x.size()) # ([64, 100, 1024])
-            # else:
-            #     x = self.embedder(x)
-            x, fno = self.embedder(x)
+            x, _ = self.embedder(x)
             # print('259',x.shape,fno.shape)
             if self.dense:
                 x = self.model(inputs_embeds=x)['last_hidden_state']
@@ -273,7 +272,7 @@ class wrapper1D(torch.nn.Module):
                     x = self.model(inputs_embeds=x)['pooler_output']
                     # x = self.model(inputs_embeds=x)['last_hidden_state'] #pooler_output']  # pooler_output: shape (batch_size, hidden_size); last_hidden_state: shape (batch_size, sequence_length, hidden_size)
                     # x = x.reshape(x.shape[0],-1)
-                    # print('250',x.shape)
+                  
                     x = self.predictor(x)
             return x
             
@@ -334,9 +333,9 @@ class Embeddings1D(nn.Module):
                     ks=args.ks 
                     ds=args.ds
                 except: # use default kernel sizes and dilation sizes
-                    ks=[3] * 18
-                    ds=[1] * 18
-                self.dash = UNet1D(n_channels=in_channel, num_classes=num_classes, ks=ks, ds=ds)
+                    ks=None
+                    ds=None
+                self.fno = UNet1D(n_channels=in_channel, num_classes=num_classes, ks=ks, ds=ds)
 
                 self.projection = nn.Conv1d(64, embed_dim, kernel_size=self.stack_num, stride=self.stack_num) 
                 downsample = False
@@ -372,14 +371,29 @@ class Embeddings1D(nn.Module):
                     ds=[1, 1, 1, 1, 1, 1, 1, 1, 1]
                 activation=None
                 remain_shape=False
-                self.dash = ResNet1D_v3(in_channels = in_channel, mid_channels=mid_channels, num_pred_classes=num_classes, dropout_rate=dropout, ks = [15, 19, 19, 7, 7, 7, 19, 19, 19], ds = [1, 15, 15, 1, 1, 1, 15, 15, 15], activation=activation, remain_shape=remain_shape, input_shape=input_shape, embed_dim=embed_dim)
+                self.fno = ResNet1D_v3(in_channels = in_channel, mid_channels=mid_channels, num_pred_classes=num_classes, dropout_rate=dropout, ks = [15, 19, 19, 7, 7, 7, 19, 19, 19], ds = [1, 15, 15, 1, 1, 1, 15, 15, 15], activation=activation, remain_shape=remain_shape, input_shape=input_shape, embed_dim=embed_dim)
+            elif self.embedder_type is None or self.embedder_type == 'random':
+                num_classes=output_shape
+                self.projection = nn.Conv1d(input_shape[1], embed_dim, kernel_size=self.stack_num, stride=self.stack_num)
+                conv_init(self.projection)
+                self.pool = nn.AdaptiveAvgPool1d(1)
+                self.linear = torch.nn.Linear(embed_dim, num_classes) 
+            elif self.embedder_type == 'deepsea':
+                in_channel=input_shape[-2]
+                num_classes=output_shape
+                self.fno = DeepSEA(in_channel = in_channel, num_classes=num_classes)
+                self.fno.apply(conv_init)
+                self.projection = nn.Conv1d(960, embed_dim, kernel_size=self.stack_num, stride=self.stack_num) 
+                conv_init(self.projection)
+                
         else: # run_dash = True
             print('Backbone selection')
             # backbone zoo: resnet, unet
             backbone_select = args.backbone_select if hasattr(args,'backbone_select') else True
             if backbone_select: 
                 # data
-                train_loader, val_loader, _, n_train, _, _, data_kwargs = get_data(root, args.dataset, args.batch_size, args.valid_split, quantize=args.quantize if hasattr(args, 'quantize') else False, rc_aug=args.rc_aug if hasattr(args, 'rc_aug') else False, shift_aug=args.shift_aug if hasattr(args, 'shift_aug') else False, one_hot=args.one_hot if hasattr(args, 'one_hot') else True)
+                # train_loader, val_loader, _, n_train, _, _, data_kwargs = get_data(root, args.dataset, args.batch_size, args.valid_split, quantize=args.quantize if hasattr(args, 'quantize') else False, rc_aug=args.rc_aug if hasattr(args, 'rc_aug') else False, shift_aug=args.shift_aug if hasattr(args, 'shift_aug') else False, one_hot=args.one_hot if hasattr(args, 'one_hot') else True)
+                train_loader, val_loader, _, n_train, _, _, data_kwargs = get_data(root, args.dataset, args.batch_size, args.valid_split, quantize=False , rc_aug=args.rc_aug if hasattr(args, 'rc_aug') else False, shift_aug=args.shift_aug if hasattr(args, 'shift_aug') else False, one_hot=args.one_hot if hasattr(args, 'one_hot') else True)
                 # loss
                 _, _, _, loss, _ = get_config(root, args)
                 loss = loss.to(args.device)
@@ -394,11 +408,13 @@ class Embeddings1D(nn.Module):
                 dropout=0
                 activation=None
                 remain_shape=False
-                ks = [15, 19, 19, 7, 7, 7, 19, 19, 19]
-                ds = [1, 15, 15, 1, 1, 1, 15, 15, 15]
+                # ks = [15, 19, 19, 7, 7, 7, 19, 19, 19]
+                # ds = [1, 15, 15, 1, 1, 1, 15, 15, 15]
+                ks=[3, 3, 3, 3, 3, 3, 3, 3, 3]
+                ds=[1, 1, 1, 1, 1, 1, 1, 1, 1]
                 model = ResNet1D_v3(in_channels = in_channel, mid_channels=mid_channels, num_pred_classes=num_classes, dropout_rate=dropout, ks = ks, ds = ds, activation=activation, remain_shape=remain_shape, input_shape=input_shape, embed_dim=embed_dim).to(args.device)
-                if args.quantize == True:
-                    model=model.bfloat16() 
+                # if args.quantize == True:
+                #     model=model.bfloat16() 
                 # optimizer
                 optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0005)
                 # scheduler
@@ -425,23 +441,47 @@ class Embeddings1D(nn.Module):
                 ks=None
                 ds=None
                 model = UNet1D(n_channels=in_channel, num_classes=num_classes, ks=ks, ds=ds).to(args.device)
-                if args.quantize == True:
-                    model=model.bfloat16() 
+                # if args.quantize == True:
+                #     model=model.bfloat16() 
                 optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0005)
                 scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda = weight_sched_train)
                 train_loss_2 = train_one_epoch3(args, model, optimizer, train_loader, loss, n_train)
                 val_loss_2, val_score_2 = evaluate3(args, model, val_loader, loss, metric)
-                print("[backbone ", "unet]", "\ttrain loss:", "%.4f" % train_loss_2, "\tval loss:", "%.4f" % val_loss_2, "\tval score:", "%.4f" % val_score_2)
-                del train_loader, val_loader
+                print("[backbone ", "unet]", "\ttrain loss:", "%.4f" % train_loss_2, "\tval loss:", "%.4f" % val_loss_2, "\tval score:", "%.4f" % val_score_2)            
+                
                 del model, optimizer, scheduler
+                
+                
+                # DeepSEA             
+                in_channel=input_shape[-2]
+                num_classes=output_shape
+                model = DeepSEA(in_channel = in_channel, num_classes=num_classes).to(args.device)
+                optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0005)
+                scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda = weight_sched_train)
+                train_loss_3 = train_one_epoch3(args, model, optimizer, train_loader, loss, n_train)
+                val_loss_3, val_score_3 = evaluate3(args, model, val_loader, loss, metric)
+                print("[backbone ", "deepsea]", "\ttrain loss:", "%.4f" % train_loss_3, "\tval loss:", "%.4f" % val_loss_3, "\tval score:", "%.4f" % val_score_3)            
+                
+                del model, optimizer, scheduler
+              
+                
+                del train_loader, val_loader
+                
                 torch.cuda.empty_cache() 
-                if val_score_1 > val_score_2:
-                    self.embedder_type = 'resnet' 
-                else:
+                # if val_score_1 > val_score_2: val_score_1 = max(val_score_1,val_score_2,val_score_3)
+                #     self.embedder_type = 'resnet' 
+                # else:
+                #     self.embedder_type = 'unet'
+                max_score = max(val_score_1, val_score_2, val_score_3)
+                if max_score == val_score_1:
+                    self.embedder_type = 'resnet'
+                elif max_score == val_score_2:
                     self.embedder_type = 'unet'
+                elif max_score == val_score_3:
+                    self.embedder_type = 'deepsea'
                 print('Backbone selection: ', self.embedder_type)
                 
-            self.embedder_type = 'resnet'
+            # self.embedder_type = 'unet'
             # optimization
             if self.embedder_type == 'resnet':
                 in_channel=input_shape[-2]
@@ -478,6 +518,7 @@ class Embeddings1D(nn.Module):
                     ds = args.ds if hasattr(args,'ds') else [1, 1, 1, 1, 1, 1, 1, 1, 1]
                 activation=None
                 remain_shape=False
+                # self.fno = ResNet1D_v3(in_channels = in_channel, mid_channels=mid_channels, num_pred_classes=num_classes, dropout_rate=dropout, ks = ks, ds = ds, activation=activation, remain_shape=remain_shape, input_shape=input_shape, embed_dim=embed_dim)
                 self.dash = ResNet1D_v3(in_channels = in_channel, mid_channels=mid_channels, num_pred_classes=num_classes, dropout_rate=dropout, ks = ks, ds = ds, activation=activation, remain_shape=remain_shape, input_shape=input_shape, embed_dim=embed_dim)
                 # self.dash = ResNet1D_v2(in_channels = in_channel, mid_channels=mid_channels, num_pred_classes=num_classes, dropout_rate=dropout, ks = ks, ds = ds, activation=activation, remain_shape=remain_shape, input_shape=input_shape, embed_dim=embed_dim,target_seq_len=target_seq_len)
             elif self.embedder_type == 'vq':
@@ -494,7 +535,7 @@ class Embeddings1D(nn.Module):
                 dash_result_path = f"./dash_results/results_acc/{args.dataset}/search_init/unet/{args.seed}/dash_final_results.npy"
                 if not os.path.exists(dash_result_path):
                     print('Start to run DASH!')
-                    subprocess.run(f"python -W ignore ./DASH/search_init.py --dataset {args.dataset} --arch unet --experiment_id wrn --seed {args.seed} --valid_split 0 --save_dir '/home/wenduoc/ORCA/L2G/dash_results/' ", shell=True, check=True)
+                    subprocess.run(f"python -W ignore ./DASH/search_init.py --dataset {args.dataset} --arch unet --experiment_id unet --seed {args.seed} --valid_split 0 --save_dir '/home/wenduoc/ORCA/L2G/dash_results/' ", shell=True, check=True)
                     print('DASH Finish!')
                 else:
                     print('Found existing DASH results!')
@@ -513,7 +554,41 @@ class Embeddings1D(nn.Module):
                 args.embedder_optimizer.params.momentum = dash_results['momentum']
                 print('DASH result:', dash_results['test best score'])
 
-                self.dash = UNet1D(n_channels=in_channel, num_classes=num_classes, ks=ks, ds=ds)
+                in_channel=input_shape[-2]
+                num_classes=output_shape
+                self.fno = UNet1D(n_channels=in_channel, num_classes=num_classes, ks=ks, ds=ds)
+                self.projection = nn.Conv1d(64, embed_dim, kernel_size=self.stack_num, stride=self.stack_num) 
+                conv_init(self.projection)
+            
+            elif self.embedder_type == 'deepsea':
+                dash_result_path = f"./dash_results/results_acc/{args.dataset}/search_init/deepsea/{args.seed}/dash_final_results.npy"
+                if not os.path.exists(dash_result_path):
+                    print('Start to run DASH!')
+                    subprocess.run(f"python -W ignore ./DASH/search_init.py --dataset {args.dataset} --arch deepsea --experiment_id deepsea --seed {args.seed} --valid_split 0 --save_dir '/home/wenduoc/ORCA/L2G/dash_results/' ", shell=True, check=True)
+                    print('DASH Finish!')
+                else:
+                    print('Found existing DASH results!')
+                # Load the results file
+                
+                dash_results = np.load(dash_result_path,allow_pickle=True).item()
+                print(type(dash_results))
+                print(dash_results)
+                ks = dash_results['ks']
+                ds = dash_results['ds']
+                args.ks =ks
+                args.ds =ds
+                dropout = dash_results['drop out']
+                args.embedder_optimizer.params.lr = dash_results['lr']
+                args.embedder_optimizer.params.weight_decay = dash_results['weight decay']
+                args.embedder_optimizer.params.momentum = dash_results['momentum']
+                print('DASH result:', dash_results['test best score'])
+
+                in_channel=input_shape[-2]
+                num_classes=output_shape
+                self.fno = DeepSEA(in_channel = in_channel, num_classes=num_classes)
+                self.fno.apply(conv_init)
+                self.projection = nn.Conv1d(960, embed_dim, kernel_size=self.stack_num, stride=self.stack_num) 
+                conv_init(self.projection)
 
     def get_stack_num(self, input_len, target_seq_len):
         if self.embed_dim == 768 or self.embed_dim == 1024: # 
@@ -535,15 +610,33 @@ class Embeddings1D(nn.Module):
 
  
         if self.embedder_type == 'resnet': # dash resnet
+            # xfno,x = self.fno(x, return_embeddings=True)
             xfno,x = self.dash(x, return_embeddings=True)
         
-        if self.embedder_type == 'unet':
-            xfno, x = self.dash(x, return_embeddings=True) # x: (64,128,500)
+        elif self.embedder_type == 'unet':
+            xfno, x = self.fno(x, return_embeddings=True) # x: (64,128,500)
+            x = self.projection(x)
+
+        elif self.embedder_type == 'deepsea':
+            xfno, x = self.fno(x, return_embeddings=True) # x: (64,128,500)
             x = self.projection(x)
         
-        elif self.embedder_type == 'vq':
-            xfno, x = self.fno(x, return_embeddings=True) # x: (64,128,500)
-            x = self.projection(x) 
+        elif self.embedder_type == 'random':
+            x = self.projection(x)
+            # Pass through the pooling layer
+            xfno = self.pool(x)
+            # Flatten the output (batch_size, embed_dim, 1) -> (batch_size, embed_dim)
+            xfno = xfno.view(xfno.size(0), -1)
+            # Pass through the linear layer
+            xfno = self.linear(xfno)
+            
+        
+        # elif self.embedder_type == 'vq': # used by deepstarr
+        #     # print('635',x.shape)
+        #     xfno, x = self.fno(x, return_embeddings=True) # x: (64,128,500)
+        #     # print('637',x.shape, xfno.shape)
+        #     x = self.projection(x) 
+        #     # print('638',x.shape, xfno.shape)
 
         x = x.transpose(1, 2)
         x = self.norm(x)
@@ -764,7 +857,7 @@ def get_tgt_model(args, root, sample_shape, num_classes, loss, add_loss=False, u
             selected_indices = np.random.choice(label_indices, num_samples_per_label, replace=False)
             selected_features.append(filtered_features[selected_indices])
             selected_labels.append(filtered_labels[selected_indices])
-        selected_features = torch.from_numpy(np.concatenate(selected_features, axis=0))
+        selected_features = torch.from_numpy(np.concatenate(selected_features, axis=0)).float()
         selected_labels = torch.from_numpy(np.concatenate(selected_labels, axis=0)).long()
 
         print(selected_features.shape, selected_labels.shape)
@@ -793,6 +886,7 @@ def get_tgt_model(args, root, sample_shape, num_classes, loss, add_loss=False, u
     for batch in tgt_train_loader: 
         x, y = batch
         print('x:',x.size())
+        # print('x:',type(x))
         print('y:',y.size())
         break
     

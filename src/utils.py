@@ -365,7 +365,7 @@ def mcc(output, target):
     target = target.cpu().detach().numpy()
     # print('target',target)
     # print('output',output)
-    output = np.argmax(output.cpu().detach().numpy(), axis=1)
+    output = np.argmax(output.float().cpu().detach().numpy(), axis=1)
 
     # # Calculate confusion matrix elements
     # tn, fp, fn, tp = metrics.confusion_matrix(target, output).ravel()
@@ -815,7 +815,7 @@ def embedder_init(source, target, train_embedder=False, match_stats=False, args=
                     # trained_dash.pop('dnaemb.bias')
                     print('checkpoint parameters:', trained_dash.keys())
                     target.fno.load_state_dict(trained_dash, strict=False)
-                elif args.embedder_type == "deepsea":
+                elif args.embedder_type == "deepsea" and args.embedder_init=='pretrained':
                     print('deepsea embedder')
                     print('Load weights from pretrained embedders')
                     trained_deepsea = torch.load("/home/wenduoc/ORCA/src_ablations/pretrained_embedders/best_deepsea_pretrained.pth")

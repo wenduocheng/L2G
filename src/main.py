@@ -11,8 +11,9 @@ from attrdict import AttrDict
 from task_configs import get_data, get_config, get_metric, get_optimizer_scheduler
 from utils import count_params, count_trainable_params, calculate_stats
 from embedder import get_tgt_model
+from data_loaders import load_nucleotide_transformer_ttg
 
-# torch.cuda.set_device(2)
+# torch.cuda.set_device(4)
 # from accelerate import Accelerator # 
 # accelerator = Accelerator() #
 
@@ -182,7 +183,8 @@ def main(use_determined, args, info=None, context=None):
             test_scores.append(test_score)
 
             print("[test best-validated]", "\ttime elapsed:", "%.4f" % (test_time_end - test_time_start), "\ttest loss:", "%.4f" % test_loss, "\ttest score:", "%.4f" % test_score)
-            
+
+
             if use_determined:
                 checkpoint_metadata = {"steps_completed": (ep + 1) * n_train, "epochs": ep}
                 with context.checkpoint.store_path(checkpoint_metadata) as (path, uuid):
@@ -190,6 +192,15 @@ def main(use_determined, args, info=None, context=None):
             else:
                 path = 'results/'  + args.dataset +'/' + str(args.finetune_method) + '_' + str(args.experiment_id) + "/" + str(args.seed)
                 np.save(os.path.join(path, 'test_score.npy'), test_scores)
+            
+            # Test Time Augmentation
+            if args.dataset in ['enhancers', 'enhancers_types', 'H3', 'H3K4me1', 'H3K4me2', 'H3K4me3', 'H3K9ac', 'H3K14ac', 'H3K36me3', 'H3K79me3', 'H4', 'H4ac', 'promoter_all', 'promoter_no_tata', 'promoter_tata', 'splice_sites_acceptors', 'splice_sites_donors','splice_sites_all']: 
+                test_loader, test_loader2 = load_nucleotide_transformer_ttg(root, args.batch_size, True, -1, args.dataset)
+                test_time_start = default_timer()
+                test_loss, test_score = evaluate2(args, model, test_loader, test_loader2, loss, metric)
+                test_time_end = default_timer()
+                print("[test-time augmentation]", "\ttime elapsed:", "%.4f" % (test_time_end - test_time_start), "\ttest loss:", "%.4f" % test_loss, "\ttest score:", "%.4f" % test_score)
+
 
            
         if use_determined and context.preempt.should_preempt():
@@ -324,6 +335,39 @@ def evaluate(args, model, loader, loss, metric):
         # print("eval total",(outs.argmax(-1)==ys).float().mean(),mc(ys.detach().cpu().numpy(),outs.argmax(-1).detach().cpu().numpy()))
         eval_loss += loss(outs, ys).item()
 
+        eval_score += metric(outs, ys).item()
+
+    return eval_loss, eval_score
+
+
+def evaluate2(args, model, loader, loader2, loss, metric):
+    model.eval()
+
+    eval_loss, eval_score = 0, 0
+    ys, outs, n_eval, n_data = [], [], 0, 0
+
+    with torch.no_grad():
+        # Assume loader and loader2 are aligned and have the same length
+        for (data_forward, data_reverse) in zip(loader, loader2):
+            x_forward, y_forward = data_forward
+            x_forward, y_forward = x_forward.to(args.device), y_forward.to(args.device)
+            out_forward = model(x_forward)
+
+            x_reverse, _ = data_reverse  
+            x_reverse = x_reverse.to(args.device)
+            out_reverse = model(x_reverse)
+
+            # Average the predictions of the forward and reverse complement sequence pairs
+            out_avg = (out_forward + out_reverse) / 2
+
+            outs.append(out_avg)
+            ys.append(y_forward)
+            n_data += x_forward.shape[0]
+
+        outs = torch.cat(outs, 0).to(args.device)
+        ys = torch.cat(ys, 0).to(args.device)
+
+        eval_loss += loss(outs, ys).item()
         eval_score += metric(outs, ys).item()
 
     return eval_loss, eval_score
