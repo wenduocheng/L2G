@@ -33,19 +33,19 @@ python ./src/main.py --config ./src/configs/task.yaml
 
 ### NT Benchmark Experiment
 
-1. Download the data
+1. **Data**
 ```bash
 cd ./src/datasets
 mkdir nucleotide_transformer_downstream_tasks
 cd nucleotide_transformer_downstream_tasks
 ```
- **Download the data** from the [Nucleotide Transformer Downstream Tasks dataset](https://huggingface.co/datasets/InstaDeepAI/nucleotide_transformer_downstream_tasks).
+ Download the data from the [Nucleotide Transformer Downstream Tasks dataset](https://huggingface.co/datasets/InstaDeepAI/nucleotide_transformer_downstream_tasks).
 
 ```bash
 cd ../../..
 ```
  
-2. Run L2G  
+2. **Run L2G** 
 Example usage:
 ```bash
 python ./src/main.py --config ./src/configs/nt_H4.yaml
@@ -54,19 +54,19 @@ python ./src/main.py --config ./src/configs/nt_H4.yaml
 
 ### Genomic Benchmark Experiment
 
-1. Download the data
+1. **Data**
 ```bash
 cd ./src/datasets
 mkdir genomic_benchmarks
 cd genomic_benchmarks
 ```
- **Download the data** from the [Genomic Benchmarks repository](https://github.com/ML-Bioinfo-CEITEC/genomic_benchmarks?tab=readme-ov-file).
+Download the data from the [Genomic Benchmarks repository](https://github.com/ML-Bioinfo-CEITEC/genomic_benchmarks?tab=readme-ov-file).
 
 ```bash
 cd ../../..
 ```
  
-2. Run L2G  
+2. **Run L2G**  
 Example usage:
 ```bash
 python ./src/main.py --config ./src/configs/human_enhancers_cohn.yaml
@@ -87,6 +87,6 @@ python ./src/main.py --config ./src/configs/task.yaml
 ```
 
 # Citation
+If you find this work useful, please consider citing our paper:
 
-If you use L2G in your research, please consider citing our work:
- To be added
+> To be added
