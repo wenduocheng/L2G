@@ -34,7 +34,6 @@ python ./src/main.py --config ./src/configs/task.yaml
 ### NT Benchmark Experiment
 
 1. Download the data
-
 ```bash
 cd ./src/datasets
 mkdir nucleotide_transformer_downstream_tasks
@@ -56,7 +55,6 @@ python ./src/main.py --config ./src/configs/nt_H4.yaml
 ### Genomic Benchmark Experiment
 
 1. Download the data
-
 ```bash
 cd ./src/datasets
 mkdir genomic_benchmarks
@@ -69,10 +67,10 @@ cd ../../..
 ```
  
 2. Run L2G  
-   Example usage:
-   ```bash
-   python ./src/main.py --config ./src/configs/human_enhancers_cohn.yaml
-   ```
+Example usage:
+```bash
+python ./src/main.py --config ./src/configs/human_enhancers_cohn.yaml
+```
 
 ## Adding New Datasets
 
@@ -84,10 +82,9 @@ To integrate new datasets into the L2G framework, follow these steps:
 4. **Update Configuration**: Update the `get_config` function in `./src/task_configs.py` to incorporate the new dataset configuration.
 5. **Add YAML Configuration**: Create a new configuration YAML file for the dataset and place it in `./src/configs`.
 6. **Run the Configuration**: Once everything is set up, run the following command to test the new dataset:
-
-   ```bash
-   python ./src/main.py --config ./src/configs/task.yaml
-   ```
+```bash
+python ./src/main.py --config ./src/configs/task.yaml
+```
 
 # Citation
 
