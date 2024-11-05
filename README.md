@@ -10,22 +10,21 @@ in three stages. In stage 1, L2G performs a Neural Architecture Search to optimi
 We recommend using a Conda environment to manage dependencies.
 
 1. **Create and activate the environment:**
-    ```bash
-    conda create --name L2G python=3.8.13
-    conda activate L2G
-    ```
+```bash
+conda create --name L2G python=3.8.13
+conda activate L2G
+```
 
 2. **Install dependencies:**
    Run the following script to install all necessary packages:
-   ```bash
-   run ./src/start.sh
-   ``
+```bash
+run ./src/start.sh
+```
 
 
 ## Example Usage
 
 To use L2G with a specific configuration, run:
-
 ```bash
 python ./src/main.py --config ./src/configs/task.yaml
 ```
@@ -48,10 +47,10 @@ cd ../../..
 ```
  
 2. Run L2G  
-   Example usage:
-   ```bash
-   python ./src/main.py --config ./src/configs/nt_H4.yaml
-   ```
+Example usage:
+```bash
+python ./src/main.py --config ./src/configs/nt_H4.yaml
+```
 
 
 ### Genomic Benchmark Experiment
