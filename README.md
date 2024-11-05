@@ -2,7 +2,7 @@
 **L2G (Language-to-Genome)** is a cross-modal fine-tuning method tailored for genomics. By leveraging neural architecure search and modality alignment, it can repurpose pretrained language models, such as RoBERTa, for genomic applications. The L2G model is trained
 in three stages. In stage 1, L2G performs a Neural Architecture Search to optimize the embedder architecture for a given task. In stage 2, the CNN embedder is pre-trained to minimize the modality gap between DNA embeddings and language embeddings. In stage 3, the entire model is fine-tuned on task-specific data in a supervised manner by minimizing the task-specific loss between the final predictions and the true labels.
 
-![overview (3)](https://github.com/user-attachments/assets/a28e4acf-dd07-490b-a1e2-8f06fd2b19df)
+<img src="https://github.com/user-attachments/assets/a28e4acf-dd07-490b-a1e2-8f06fd2b19df" alt="Overview" width="600"/>
 
 ---
 
@@ -18,20 +18,16 @@ We recommend using a Conda environment to manage dependencies.
 2. **Install dependencies:**
    Run the following script to install all necessary packages:
    ```bash
-   ./src/start.sh
+   run ./src/start.sh
 
 
 ## Example Usage
 
-To start using L2G with a specific configuration, run:
+To use L2G with a specific configuration, run:
 
 ```bash
 python ./src/main.py --config ./src/configs/task.yaml
-
-
-# Example Usage
-python ./src/main.py --config ./src/configs/task.yaml
-
+```
 
 ## Experiments
 
@@ -58,6 +54,7 @@ To integrate new datasets into the L2G framework, follow these steps:
 
    ```bash
    python ./src/main.py --config ./src/configs/task.yaml
+   ```
 
 # Citation
 
