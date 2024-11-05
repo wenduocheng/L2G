@@ -19,6 +19,7 @@ We recommend using a Conda environment to manage dependencies.
    Run the following script to install all necessary packages:
    ```bash
    run ./src/start.sh
+   ``
 
 
 ## Example Usage
@@ -33,22 +34,55 @@ python ./src/main.py --config ./src/configs/task.yaml
 
 ### NT Benchmark Experiment
 
-1. **Download the data** from the [Genomic Benchmarks repository](https://github.com/ML-Bioinfo-CEITEC/genomic_benchmarks?tab=readme-ov-file).
-2. Follow the instructions in the dataset documentation for data preparation and structure.
+1. Download the data
+
+```bash
+cd ./src/datasets
+mkdir nucleotide_transformer_downstream_tasks
+cd nucleotide_transformer_downstream_tasks
+```
+ **Download the data** from the [Nucleotide Transformer Downstream Tasks dataset](https://huggingface.co/datasets/InstaDeepAI/nucleotide_transformer_downstream_tasks).
+
+```bash
+cd ../../..
+```
+ 
+2. Run L2G  
+   Example usage:
+   ```bash
+   python ./src/main.py --config ./src/configs/nt_H4.yaml
+   ```
+
 
 ### Genomic Benchmark Experiment
 
-1. **Download the data** from the [Genomic Benchmarks repository](https://github.com/ML-Bioinfo-CEITEC/genomic_benchmarks?tab=readme-ov-file).
-2. Prepare the data as instructed in the dataset documentation.
+1. Download the data
+
+```bash
+cd ./src/datasets
+mkdir genomic_benchmarks
+cd genomic_benchmarks
+```
+ **Download the data** from the [Genomic Benchmarks repository](https://github.com/ML-Bioinfo-CEITEC/genomic_benchmarks?tab=readme-ov-file).
+
+```bash
+cd ../../..
+```
+ 
+2. Run L2G  
+   Example usage:
+   ```bash
+   python ./src/main.py --config ./src/configs/human_enhancers_cohn.yaml
+   ```
 
 ## Adding New Datasets
 
 To integrate new datasets into the L2G framework, follow these steps:
 
-1. **Add Data Loaders**: Implement any new data loaders in `./src/data_loaders.py`.
-2. **Define Data Processing**: Update the `get_data` function in `./src/task_configs.py` to handle the new dataset.
+1. **Add Data Loaders**: Implement new data loaders in `./src/data_loaders.py`.
+2. **Define Data Processing**: Update the `get_data` function in `./src/task_configs.py`.
 3. **Add Loss Functions and Metrics**: If your dataset requires specific loss functions or evaluation metrics, define them in `./src/utils.py` and add them to the `get_metric` function in `./src/task_configs.py`.
-4. **Update Configuration**: Adjust the `get_config` function in `./src/task_configs.py` to incorporate the new dataset configuration.
+4. **Update Configuration**: Update the `get_config` function in `./src/task_configs.py` to incorporate the new dataset configuration.
 5. **Add YAML Configuration**: Create a new configuration YAML file for the dataset and place it in `./src/configs`.
 6. **Run the Configuration**: Once everything is set up, run the following command to test the new dataset:
 
