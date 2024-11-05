@@ -1,6 +1,8 @@
 # L2G: Cross-Modal Fine-Tuning for Genomics
 **L2G (Language-to-Genome)** is a cross-modal fine-tuning method tailored for genomics. By leveraging neural architecure search and modality alignment, it can repurpose pretrained language models, such as RoBERTa, for genomic applications. The L2G model is trained
-in three stages. In stage 1, L2G performs a Neural Architecture Search to optimize the embedder architecture for a given task. In stage 2, the CNN embedder is pre-trained to minimize the modality gap between DNA embeddings and language embeddings. In stage 3, the entire model is fine-tuned on task-specific data in a supervised manner by minimizing the task-specific loss between the final predictions and the true labels. For an overview of the methodology, see the [Overview PDF](https://github.com/user-attachments/files/17629317/overview.2.pdf).
+in three stages. In stage 1, L2G performs a Neural Architecture Search to optimize the embedder architecture for a given task. In stage 2, the CNN embedder is pre-trained to minimize the modality gap between DNA embeddings and language embeddings. In stage 3, the entire model is fine-tuned on task-specific data in a supervised manner by minimizing the task-specific loss between the final predictions and the true labels.
+
+![overview (3)](https://github.com/user-attachments/assets/a28e4acf-dd07-490b-a1e2-8f06fd2b19df)
 
 ---
 
