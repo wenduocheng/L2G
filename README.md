@@ -56,7 +56,7 @@ cd ../../..
 
 Example usage:
 ```bash
-python ./src/main.py --config ./src/configs/nt_H4.yaml
+python ./src/main.py --config ./src/configs/nt_H3.yaml
 ```
 
 
