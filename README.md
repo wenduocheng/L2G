@@ -36,6 +36,8 @@ If using Weights & Biases, create `src/wandb_key.py` with the following content:
 key = 'your_wandb_api_key_here'
 ```
 
+And set the `use_wandb` argument in the `task.yaml` file to `True`.
+
 ## Experiments
 
 ### NT Benchmark Experiment
@@ -43,13 +45,18 @@ key = 'your_wandb_api_key_here'
 1. **Data**
 ```bash
 cd ./src/datasets
-mkdir nucleotide_transformer_downstream_tasks
-cd nucleotide_transformer_downstream_tasks
+
 ```
  Download the data from the [Nucleotide Transformer Downstream Tasks dataset](https://huggingface.co/datasets/InstaDeepAI/nucleotide_transformer_downstream_tasks).
 
 ```bash
-cd ../../..
+git clone https://huggingface.co/datasets/InstaDeepAI/nucleotide_transformer_downstream_tasks
+cd ../..
+```
+
+Fix the duplicate sequence identifiers (keys) in the FASTA headers in the original data files.
+```python
+python ./src/helper_scripts/fix_duplicate_fna_headers.py
 ```
  
 2. **Run L2G** 

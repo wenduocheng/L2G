@@ -34,15 +34,16 @@ def fix_duplicate_headers(fasta_path, output_path):
 
 
 
-dataset = 'splice_sites_all'
+dataset = 'H3K79me3' # 'splice_sites_all'
 
 # Define the path to the original and the new file
-original_test_fna_path = "./datasets/nucleotide_transformer_downstream_tasks/" + dataset + "/test.fna"
-fixed_test_fna_path = "./datasets/nucleotide_transformer_downstream_tasks/" + dataset + "/test.fna"
+original_test_fna_path = "./src/datasets/nucleotide_transformer_downstream_tasks/" + dataset + "/test.fna"
+fixed_test_fna_path = "./src/datasets/nucleotide_transformer_downstream_tasks/" + dataset + "/test.fna"
 
-original_train_fna_path = "./datasets/nucleotide_transformer_downstream_tasks/" + dataset + "/train.fna"
-fixed_train_fna_path = "./datasets/nucleotide_transformer_downstream_tasks/" + dataset + "/train.fna"
+original_train_fna_path = "./src/datasets/nucleotide_transformer_downstream_tasks/" + dataset + "/train.fna"
+fixed_train_fna_path = "./src/datasets/nucleotide_transformer_downstream_tasks/" + dataset + "/train.fna"
 
 # Fix the file
-fix_duplicate_headers(original_train_fna_path, fixed_train_fna_path)
 fix_duplicate_headers(original_test_fna_path, fixed_test_fna_path)
+fix_duplicate_headers(original_train_fna_path, fixed_train_fna_path)
+

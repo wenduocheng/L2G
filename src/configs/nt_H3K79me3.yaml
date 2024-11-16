@@ -10,7 +10,7 @@ hyperparameters:
     maxsamples: 256 
     target_seq_len: 128  
 
-    experiment_id: 0 
+    experiment_id: 6 
 
     seed: 0
     epochs: 25 
@@ -36,7 +36,7 @@ hyperparameters:
     rc_aug: True # reverse complement augmentation
     shift_aug: True # shift augmentation
 
-    use_wandb: False
+    use_wandb: True
     data_parallel: False
     quantize: False
 
