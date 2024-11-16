@@ -18,7 +18,7 @@ conda activate L2G
 2. **Install dependencies:**
    Run the following script to install all necessary packages:
 ```bash
-run ./src/start.sh
+sh ./src/setup.sh
 ```
 
 
