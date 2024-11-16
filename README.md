@@ -7,7 +7,7 @@ in three stages. In stage 1, L2G performs a Neural Architecture Search to optimi
 ---
 
 ## Installation
-We recommend using a Conda environment to manage dependencies.
+We recommend using a Conda environment to manage dependencies. Please refer to the [Anaconda webpage](https://anaconda.org/) for Conda installation instructions.
 
 1. **Create and activate the environment:**
 ```bash
@@ -28,6 +28,8 @@ To use L2G with a specific configuration, run:
 ```bash
 python ./src/main.py --config ./src/configs/task.yaml
 ```
+
+Using Weights & Biases is optional but recommended for experiment tracking. Please refer to the [Weights & Biases Quickstart Guide](https://docs.wandb.ai/quickstart) for instructions.
 
 If using Weights & Biases, create `src/wandb_key.py` with the following content:
 ```python
