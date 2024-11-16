@@ -3,17 +3,17 @@ environment:
     image:
         gpu: docker.io/junhongshen/nb360:updatenew
 hyperparameters:
-    dataset: H3K4me2 #DEEPSEA
+    dataset: H3K4me2 
     embedder_dataset: text
     objective: MMD
     weight: roberta
-    maxsamples: 256 #512
-    target_seq_len: 128 #256 #512
+    maxsamples: 256 
+    target_seq_len: 128  
 
-    experiment_id: 7 
+    experiment_id: 0 
 
     seed: 0
-    epochs: 25 #25
+    epochs: 25 
     embedder_epochs: 100 
     pretrain_epochs: 60 
     predictor_epochs: 0 
@@ -24,8 +24,8 @@ hyperparameters:
     finetune_method: all
     one_hot: True
     run_dash: True
-    lora_r: 12 # 12
-    lora_alpha: 32 # 32
+    lora_r: 12 
+    lora_alpha: 32 
     lora_dropout: 0.1
     lora_target_modules: ["q_proj", "v_proj"]
 
@@ -35,19 +35,18 @@ hyperparameters:
     rc_aug: True # reverse complement augmentation
     shift_aug: True # shift augmentation
 
-    use_wandb: True
-    wandb_key: "ef4b923327eb2a110fda334efee4ec80feee4bc7"
+    use_wandb: False
+
     data_parallel: False
     quantize: False
 
-    embedder_type: "resnet" # dash, unet,dash random
+    embedder_type: "unet" # unet, deepsea, resnet, random
     embedder_init: "random"
     ks: [3, 5, 3, 3, 3, 5, 3, 9, 11]
     ds: [1, 1, 1, 1, 1, 1, 1, 1, 1]
-    emedder_path: None
 
 
-    batch_size: 64 #128 
+    batch_size: 64  
     eval_batch_size: 1000
     accum: 1
     clip: 1 

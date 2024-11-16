@@ -26,6 +26,385 @@ from src.helper_scripts.genomic_benchmarks_utils import GenomicBenchmarkDataset,
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
+
+
+def load_genomic_benchmarks(root, batch_size, one_hot = True, valid_split=-1, dataset_name = 'human_enhancers_cohn', quantize=False, rc_aug = True, shift_aug=True):
+    if dataset_name == "dummy_mouse_enhancers_ensembl":
+        max_length = 4707
+    if dataset_name == "demo_coding_vs_intergenomic_seqs":
+        max_length = 200
+    if dataset_name == "demo_human_or_worm":
+        max_length = 200
+    if dataset_name == "human_enhancers_cohn":
+        max_length = 500
+    if dataset_name == "human_enhancers_ensembl":
+        max_length = 573  
+    if dataset_name == "human_ensembl_regulatory":
+        max_length = 802  
+    if dataset_name == "human_nontata_promoters":
+        max_length = 251  
+    if dataset_name == "human_ocr_ensembl":
+        max_length = 593  
+        
+    use_padding = True
+    add_eos = False  # add end of sentence token
+
+    tokenizer = CharacterTokenizer(
+            characters=['A', 'C', 'G', 'T', 'N'],  # add DNA characters, N is uncertain
+            model_max_length=max_length + 2,  # to account for special tokens, like EOS
+            add_special_tokens=False,  # we handle special tokens elsewhere
+            padding_side='left', # since HyenaDNA is causal, we pad on the left
+        )
+    
+    ds_train = GenomicBenchmarkDataset(
+            max_length = max_length,
+            dest_path = root + '/genomic_benchmarks',
+            use_padding = use_padding,
+            split = 'train',
+            tokenizer=tokenizer,
+            dataset_name=dataset_name,
+            rc_aug=False,
+            add_eos=add_eos,
+            one_hot=one_hot,
+            quantize=quantize
+        )
+    
+
+    ds_test = GenomicBenchmarkDataset(
+        max_length = max_length,
+        dest_path = root + '/genomic_benchmarks',
+        use_padding = use_padding,
+        split = 'test',
+        tokenizer=tokenizer,
+        dataset_name=dataset_name,
+        rc_aug=False,
+        add_eos=add_eos,
+        one_hot=one_hot,
+        quantize=quantize
+        )
+
+    if rc_aug:
+        ds_train2 = GenomicBenchmarkDataset(
+            max_length = max_length,
+            dest_path = root+'/genomic_benchmarks',
+            use_padding = use_padding,
+            split = 'train',
+            tokenizer=tokenizer,
+            dataset_name=dataset_name,
+            rc_aug=True,
+            add_eos=add_eos,
+            one_hot=one_hot,
+            quantize=quantize
+        )
+        print('Data Loaders:',set(ds_train.all_labels),len(ds_train),len(ds_test),np.array(ds_train.all_labels).mean(), np.array(ds_test.all_labels).mean())
+        ds_train = combine_datasets(ds_train, ds_train2)
+        
+    if shift_aug:
+        ds_train3 = copy.deepcopy(ds_train)
+        ds_train3.shift=3
+        ds_train = combine_datasets(ds_train, ds_train3)
+
+    train_loader = DataLoader(ds_train, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
+    test_loader = DataLoader(ds_test, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
+    return train_loader, None, test_loader
+
+
+def load_nucleotide_transformer(root, batch_size, one_hot = True, valid_split=-1, dataset_name = 'enhancers', quantize=False, rc_aug = True, shift_aug=True):
+    # Define a dictionary mapping dataset names to max_length
+    max_length_dict = {
+        "enhancers": 200,
+        "enhancers_types": 200,  # nclass=3
+        "H3": 500,
+        "H3K4me1": 500,
+        "H3K4me2": 500,
+        "H3K4me3": 500,
+        "H3K9ac": 500,
+        "H3K14ac": 500,
+        "H3K36me3": 500,
+        "H3K79me3": 500,
+        "H4": 500,
+        "H4ac": 500,
+        "promoter_all": 300,
+        "promoter_no_tata": 300,
+        "promoter_tata": 300,
+        "splice_sites_acceptors": 600,
+        "splice_sites_donors": 600,
+        "splice_sites_all": 400
+    }
+    # Use the dictionary to get max_length
+    max_length = max_length_dict.get(dataset_name)
+    use_padding = True
+    add_eos = False  # add end of sentence token
+    tokenizer = CharacterTokenizer(
+            characters=['A', 'C', 'G', 'T', 'N'],  # add DNA characters, N is uncertain
+            model_max_length=max_length + 2,  # to account for special tokens, like EOS
+            add_special_tokens=False,  # we handle special tokens elsewhere
+            padding_side='left', # since HyenaDNA is causal, we pad on the left
+        )
+    ds_train = NucleotideTransformerDataset(
+            max_length = max_length,
+            dest_path = root + '/nucleotide_transformer_downstream_tasks',
+            use_padding = use_padding,
+            split = 'train',
+         
+            tokenizer=tokenizer,
+            dataset_name=dataset_name,
+            rc_aug=False,
+            add_eos=add_eos,
+            one_hot=one_hot,
+            quantize=quantize
+        )
+    ds_test = NucleotideTransformerDataset(
+        max_length = max_length,
+        dest_path = root+ '/nucleotide_transformer_downstream_tasks',
+        use_padding = use_padding,
+        split = 'test',
+        tokenizer=tokenizer,
+        dataset_name=dataset_name,
+        rc_aug=False,
+        add_eos=add_eos,
+        one_hot=one_hot,
+        quantize=quantize
+        )
+        
+    if shift_aug:
+        ds_train3 = NucleotideTransformerDataset(
+            max_length = max_length,
+            dest_path=root + '/nucleotide_transformer_downstream_tasks',
+            use_padding = use_padding,
+            split = 'train',
+            
+            tokenizer=tokenizer,
+            dataset_name=dataset_name,
+            rc_aug=True,
+            add_eos=add_eos,
+            one_hot=one_hot,
+            quantize=quantize
+        )
+
+        ds_train3.shift=3
+        ds_train = combine_datasets(ds_train, ds_train3)
+
+    if rc_aug:
+        ds_train2 = NucleotideTransformerDataset(
+            max_length = max_length,
+            dest_path=root + '/nucleotide_transformer_downstream_tasks',
+            use_padding = use_padding,
+            split = 'train',
+            
+            tokenizer=tokenizer,
+            dataset_name=dataset_name,
+            rc_aug=True,
+            add_eos=add_eos,
+            one_hot=one_hot,
+            quantize=quantize
+        )
+        ds_train = combine_datasets(ds_train, ds_train2)
+
+    train_loader = DataLoader(ds_train, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=False)
+    test_loader = DataLoader(ds_test, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=False)
+    return train_loader, None, test_loader
+
+
+
+
+
+def load_nucleotide_transformer2(root, batch_size, one_hot=True, valid_split=False, dataset_name="enhancers", quantize=False, rc_aug=False, shift_aug=False):
+    max_length_dict = {
+        "enhancers": 200,
+        "enhancers_types": 200,  # nclass=3
+        "H3": 500,
+        "H3K4me1": 500,
+        "H3K4me2": 500,
+        "H3K4me3": 500,
+        "H3K9ac": 500,
+        "H3K14ac": 500,
+        "H3K36me3": 500,
+        "H3K79me3": 500,
+        "H4": 500,
+        "H4ac": 500,
+        "promoter_all": 300,
+        "promoter_no_tata": 300,
+        "promoter_tata": 300,
+        "splice_sites_acceptors": 600,
+        "splice_sites_donors": 600,
+        "splice_sites_all": 600
+    }
+
+    max_length = max_length_dict.get(dataset_name)
+    
+    complement_mapping = {'A': 'T', 'T': 'A', 'C': 'G', 'G': 'C', 'N': 'N'}
+    
+    def reverse_complement(sequence):
+        return ''.join([complement_mapping[base] for base in sequence[::-1]])
+
+    def shift_sequence(sequence, shift_amount):
+        shift_amount = shift_amount % len(sequence)  # Ensure the shift is within sequence length
+        return sequence[-shift_amount:] + sequence[:-shift_amount]
+
+    def one_hot_encode(sequence):
+        mapping = {'A': [1, 0, 0, 0, 0],
+                   'C': [0, 1, 0, 0, 0],
+                   'G': [0, 0, 1, 0, 0],
+                   'T': [0, 0, 0, 1, 0],
+                   'N': [0, 0, 0, 0, 1]}
+        return np.array([mapping[base] for base in sequence])
+
+    def pad_sequences(sequences, maxlen, padding_value=0):
+        padded_sequences = np.full((len(sequences), maxlen, 5), padding_value)
+        for i, seq in enumerate(sequences):
+            length = len(seq)
+            padded_sequences[i, :length] = seq
+        return padded_sequences
+
+    class NTDataset(Dataset):
+        def __init__(self, sequences, labels, max_length, rc_aug=False, shift_aug=False, quantize=quantize):
+            self.sequences = sequences
+            self.labels = labels
+            self.max_length = max_length
+            self.rc_aug = rc_aug
+            self.shift_aug = shift_aug
+            self.quantize = quantize
+
+            self.processed_sequences, self.processed_labels = self.augment_data()
+
+        def augment_data(self):
+            augmented_sequences = []
+            augmented_labels = []
+            
+            for i, sequence in enumerate(self.sequences):
+                augmented_sequences.append(self.preprocess(sequence))
+                augmented_labels.append(self.labels[i])
+
+                # Reverse complement augmentation
+                if self.rc_aug:
+                    rc_sequence = reverse_complement(sequence)
+                    augmented_sequences.append(self.preprocess(rc_sequence))
+                    augmented_labels.append(self.labels[i])
+
+                # Shift augmentation
+                if self.shift_aug:
+                    for shift_amount in range(3):  # Shifting 1-3 bases
+                        shifted_sequence = shift_sequence(sequence, shift_amount)
+                        augmented_sequences.append(self.preprocess(shifted_sequence))
+                        augmented_labels.append(self.labels[i])
+            
+            return augmented_sequences, augmented_labels
+
+        def preprocess(self, sequence):
+            # One-hot encoding and padding
+            return pad_sequences([one_hot_encode(sequence)], self.max_length)[0]
+
+        def __len__(self):
+            return len(self.processed_sequences)
+
+        def __getitem__(self, idx):
+            dtype = torch.bfloat16 if self.quantize else torch.float32
+            sequence = torch.tensor(self.processed_sequences[idx], dtype=dtype).permute(1, 0)
+            label = torch.tensor(self.processed_labels[idx], dtype=torch.long)
+            return sequence, label
+
+    # Load dataset
+    train_dataset = load_dataset(
+        "InstaDeepAI/nucleotide_transformer_downstream_tasks",
+        dataset_name,
+        split="train",
+        streaming=False,
+    )
+    test_dataset = load_dataset(
+        "InstaDeepAI/nucleotide_transformer_downstream_tasks",
+        dataset_name,
+        split="test",
+        streaming=False,
+    )
+
+    train_sequences = train_dataset['sequence']
+    train_labels = train_dataset['label']
+
+    if valid_split > 0 or  valid_split==True:
+        # Split the dataset into a training and a validation dataset
+        print('Split the train dataset into a training and a validation dataset')
+        train_sequences, validation_sequences, train_labels, validation_labels = train_test_split(train_sequences, train_labels, test_size=0.1, random_state=42)
+
+    test_sequences = test_dataset['sequence']
+    test_labels = test_dataset['label']
+
+    train_dataset = NTDataset(train_sequences, train_labels, max_length, rc_aug=rc_aug, shift_aug=shift_aug)
+    test_dataset = NTDataset(test_sequences, test_labels, max_length)
+
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+    if valid_split > 0:
+        validation_dataset = NTDataset(validation_sequences, validation_labels, max_length)
+        valid_loader = DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
+        return train_loader, valid_loader, test_loader
+
+    return train_loader, None, test_loader
+
+# For test time augmentation
+def load_nucleotide_transformer_ttg(root, batch_size, one_hot = True, valid_split=-1, dataset_name = 'enhancers', quantize=False):
+    # Define a dictionary mapping dataset names to max_length
+    max_length_dict = {
+        "enhancers": 200,
+        "enhancers_types": 200,  # nclass=3
+        "H3": 500,
+        "H3K4me1": 500,
+        "H3K4me2": 500,
+        "H3K4me3": 500,
+        "H3K9ac": 500,
+        "H3K14ac": 500,
+        "H3K36me3": 500,
+        "H3K79me3": 500,
+        "H4": 500,
+        "H4ac": 500,
+        "promoter_all": 300,
+        "promoter_no_tata": 300,
+        "promoter_tata": 300,
+        "splice_sites_acceptors": 600,
+        "splice_sites_donors": 600,
+        "splice_sites_all": 400
+    }
+    # Use the dictionary to get max_length
+    max_length = max_length_dict.get(dataset_name)
+    use_padding = True
+    add_eos = False  # add end of sentence token
+    tokenizer = CharacterTokenizer(
+            characters=['A', 'C', 'G', 'T', 'N'],  # add DNA characters, N is uncertain
+            model_max_length=max_length + 2,  
+            add_special_tokens=False, 
+            padding_side='left', 
+        )
+
+    ds_test = NucleotideTransformerDataset(
+        max_length = max_length,
+        dest_path = root+ '/nucleotide_transformer_downstream_tasks',
+        use_padding = use_padding,
+        split = 'test',
+        tokenizer=tokenizer,
+        dataset_name=dataset_name,
+        rc_aug=False,
+        add_eos=add_eos,
+        one_hot=one_hot,
+        quantize=quantize
+        )
+    ds_test2 = NucleotideTransformerDataset(
+        max_length = max_length,
+        dest_path = root+ '/nucleotide_transformer_downstream_tasks',
+        use_padding = use_padding,
+        split = 'test',
+        tokenizer=tokenizer,
+        dataset_name=dataset_name,
+        rc_aug=True,
+        add_eos=add_eos,
+        one_hot=one_hot,
+        quantize=quantize
+        )
+        
+    test_loader = DataLoader(ds_test, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=False)
+    test_loader_rc = DataLoader(ds_test2, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=False)
+    return test_loader, test_loader_rc
+
 def coin_flip():
     return random() > 0.5
 
@@ -108,6 +487,7 @@ def load_deepsea(root, batch_size, one_hot = True,quantize=False, valid_split=-1
         y_train_rc = y_train.clone()  # Assuming the labels remain the same for the reverse complement
         x_train = torch.cat([x_train, x_train_rc], dim=0)
         y_train = torch.cat([y_train, y_train_rc], dim=0)
+
     if shift_aug:
         if not one_hot:
             print('sequence shift: ',3)
@@ -287,116 +667,6 @@ def load_deepsea_full(root, batch_size, one_hot = True, valid_split=-1,quantize=
 
     return train_loader, valid_loader, test_loader
 
-def load_deepstarr_dev(root, batch_size, one_hot = True, valid_split=-1,rc_aug=True, shift_aug=False):
-    filename = root + '/deepstarr' + '/Sequences_activity_all.txt'
-
-    data = pd.read_table(filename)
-    nucleotide_dict = {'A': [1, 0, 0, 0],
-                   'C': [0, 1, 0, 0],
-                   'G': [0, 0, 1, 0],
-                   'T': [0, 0, 0, 1],
-                   'N': [0, 0, 0, 0]} # sometimes there are Ns
-
-    # define a function to one-hot encode a single DNA sequence
-    def one_hot_encode(seq):
-        return np.array([nucleotide_dict[nuc] for nuc in seq])
-
-    # function to load sequences and enhancer activity
-    def prepare_input(data_set):
-        # one-hot encode DNA sequences, apply function
-        seq_matrix = np.array(data_set['Sequence'].apply(one_hot_encode).tolist())
-        print(seq_matrix.shape) # dimensions are (number of sequences, length of sequences, nucleotides)
-
-        # Get output array with dev and hk activities
-        Y_dev = data_set.Dev_log2_enrichment
-        Y_hk = data_set.Hk_log2_enrichment
-        Y = [Y_dev, Y_hk]
-
-        return seq_matrix, Y
-    
-    # Process data for train/val/test sets
-    X_train, Y_train = prepare_input(data[data['set'] == "Train"])
-    X_valid, Y_valid = prepare_input(data[data['set'] == "Val"])
-    X_test, Y_test = prepare_input(data[data['set'] == "Test"])
-
-    if one_hot:
-        x_train = torch.from_numpy(X_train).transpose(-1, -2).float() 
-        x_val = torch.from_numpy(X_valid).transpose(-1, -2).float()
-        x_test = torch.from_numpy(X_test).transpose(-1, -2).float()
-    else:
-        x_train = torch.from_numpy(np.argmax(X_train, axis=2)).unsqueeze(-2).float() 
-        x_val = torch.from_numpy(np.argmax(X_valid, axis=2)).unsqueeze(-2).float()
-        x_test = torch.from_numpy(np.argmax(X_test, axis=2)).unsqueeze(-2).float()
-    
-    y_train = torch.from_numpy(np.array(Y_train[0])).unsqueeze(1).float() 
-    y_val = torch.from_numpy(np.array(Y_valid[0])).unsqueeze(1).float() 
-    y_test = torch.from_numpy(np.array(Y_test[0])).unsqueeze(1).float()   
-
-
-    if valid_split > 0:
-        train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_train, y_train), batch_size = batch_size, shuffle=True, num_workers=4, pin_memory=True)
-        val_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_val, y_val), batch_size = batch_size, shuffle=True, num_workers=4, pin_memory=True)
-        test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_test, y_test), batch_size = batch_size, shuffle=False, num_workers=4, pin_memory=True)
-        return train_loader, val_loader, test_loader
-    else:
-        train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_train, y_train), batch_size = batch_size, shuffle=True, num_workers=4, pin_memory=True)
-        test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_test, y_test), batch_size = batch_size, shuffle=False, num_workers=4, pin_memory=True)
-        return train_loader, None, test_loader
-
-def load_deepstarr_hk(root, batch_size, one_hot = True, valid_split=-1,rc_aug=True, shift_aug=False):
-    filename = root + '/deepstarr' + '/Sequences_activity_all.txt'
-
-    data = pd.read_table(filename)
-    nucleotide_dict = {'A': [1, 0, 0, 0],
-                   'C': [0, 1, 0, 0],
-                   'G': [0, 0, 1, 0],
-                   'T': [0, 0, 0, 1],
-                   'N': [0, 0, 0, 0]} # sometimes there are Ns
-
-    # define a function to one-hot encode a single DNA sequence
-    def one_hot_encode(seq):
-        return np.array([nucleotide_dict[nuc] for nuc in seq])
-
-    # function to load sequences and enhancer activity
-    def prepare_input(data_set):
-        # one-hot encode DNA sequences, apply function
-        seq_matrix = np.array(data_set['Sequence'].apply(one_hot_encode).tolist())
-        print(seq_matrix.shape) # dimensions are (number of sequences, length of sequences, nucleotides)
-
-        # Get output array with dev and hk activities
-        Y_dev = data_set.Dev_log2_enrichment
-        Y_hk = data_set.Hk_log2_enrichment
-        Y = [Y_dev, Y_hk]
-
-        return seq_matrix, Y
-    
-    # Process data for train/val/test sets
-    X_train, Y_train = prepare_input(data[data['set'] == "Train"])
-    X_valid, Y_valid = prepare_input(data[data['set'] == "Val"])
-    X_test, Y_test = prepare_input(data[data['set'] == "Test"])
-
-    if one_hot:
-        x_train = torch.from_numpy(X_train).transpose(-1, -2).float() 
-        x_val = torch.from_numpy(X_valid).transpose(-1, -2).float()
-        x_test = torch.from_numpy(X_test).transpose(-1, -2).float()
-    else:
-        x_train = torch.from_numpy(np.argmax(X_train, axis=2)).unsqueeze(-2).float() 
-        x_val = torch.from_numpy(np.argmax(X_valid, axis=2)).unsqueeze(-2).float()
-        x_test = torch.from_numpy(np.argmax(X_test, axis=2)).unsqueeze(-2).float()
-    
-    y_train = torch.from_numpy(np.array(Y_train[1])).unsqueeze(1).float() 
-    y_val = torch.from_numpy(np.array(Y_valid[1])).unsqueeze(1).float() 
-    y_test = torch.from_numpy(np.array(Y_test[1])).unsqueeze(1).float()   
-
-    if valid_split > 0:
-        train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_train, y_train), batch_size = batch_size, shuffle=True, num_workers=4, pin_memory=True)
-        val_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_val, y_val), batch_size = batch_size, shuffle=True, num_workers=4, pin_memory=True)
-        test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_test, y_test), batch_size = batch_size, shuffle=False, num_workers=4, pin_memory=True)
-        return train_loader, val_loader, test_loader
-    else:
-        train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_train, y_train), batch_size = batch_size, shuffle=True, num_workers=4, pin_memory=True)
-        test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_test, y_test), batch_size = batch_size, shuffle=False, num_workers=4, pin_memory=True)
-        return train_loader, None, test_loader
 
 def load_deepstarr(root, batch_size, one_hot = True, valid_split=-1, quantize=False, rc_aug=True, shift_aug=False):
     filename = root + '/deepstarr' + '/Sequences_activity_all.txt'
@@ -516,1048 +786,6 @@ def load_deepstarr(root, batch_size, one_hot = True, valid_split=-1, quantize=Fa
         test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_test, y_test), batch_size = batch_size, shuffle=False, num_workers=4, pin_memory=True)
         return train_loader, None, test_loader
 
-def load_genomic_benchmarks(root, batch_size, one_hot = True, valid_split=-1, dataset_name = 'human_enhancers_cohn', quantize=False, rc_aug = True, shift_aug=True):
-    if dataset_name == "dummy_mouse_enhancers_ensembl":
-        max_length = 4707
-    if dataset_name == "demo_coding_vs_intergenomic_seqs":
-        max_length = 200
-    if dataset_name == "demo_human_or_worm":
-        max_length = 200
-    if dataset_name == "human_enhancers_cohn":
-        max_length = 500
-    if dataset_name == "human_enhancers_ensembl":
-        max_length = 573  
-    if dataset_name == "human_ensembl_regulatory":
-        max_length = 802  
-    if dataset_name == "human_nontata_promoters":
-        max_length = 251  
-    if dataset_name == "human_ocr_ensembl":
-        max_length = 593  
-        
-    use_padding = True
-    add_eos = False  # add end of sentence token
-
-    tokenizer = CharacterTokenizer(
-            characters=['A', 'C', 'G', 'T', 'N'],  # add DNA characters, N is uncertain
-            model_max_length=max_length + 2,  # to account for special tokens, like EOS
-            add_special_tokens=False,  # we handle special tokens elsewhere
-            padding_side='left', # since HyenaDNA is causal, we pad on the left
-        )
-    
-    ds_train = GenomicBenchmarkDataset(
-            max_length = max_length,
-            dest_path = root + '/genomic_benchmarks',
-            use_padding = use_padding,
-            split = 'train',
-            tokenizer=tokenizer,
-            dataset_name=dataset_name,
-            rc_aug=False,
-            add_eos=add_eos,
-            one_hot=one_hot,
-            quantize=quantize
-        )
-    
-
-    ds_test = GenomicBenchmarkDataset(
-        max_length = max_length,
-        dest_path = root + '/genomic_benchmarks',
-        use_padding = use_padding,
-        split = 'test',
-        tokenizer=tokenizer,
-        dataset_name=dataset_name,
-        rc_aug=False,
-        add_eos=add_eos,
-        one_hot=one_hot,
-        quantize=quantize
-        )
-
-    if rc_aug:
-        ds_train2 = GenomicBenchmarkDataset(
-            max_length = max_length,
-            dest_path = root+'/genomic_benchmarks',
-            use_padding = use_padding,
-            split = 'train',
-            tokenizer=tokenizer,
-            dataset_name=dataset_name,
-            rc_aug=True,
-            add_eos=add_eos,
-            one_hot=one_hot,
-            quantize=quantize
-        )
-        print('Data Loaders:',set(ds_train.all_labels),len(ds_train),len(ds_test),np.array(ds_train.all_labels).mean(), np.array(ds_test.all_labels).mean())
-        ds_train = combine_datasets(ds_train, ds_train2)
-        
-    if shift_aug:
-        ds_train3 = copy.deepcopy(ds_train)
-        # ds_train4 = copy.deepcopy(ds_train)
-        # ds_train5 = copy.deepcopy(ds_train)
-        ds_train3.shift=3
-        # ds_train4.shift=2
-        # ds_train5.shift=1
-        ds_train = combine_datasets(ds_train, ds_train3)
-        # ds_train = combine_datasets(ds_train, ds_train4)
-        # ds_train = combine_datasets(ds_train, ds_train5)
-     
-
-        # ds_test=interleave_datasets(ds_test,ds_test2)
-    # if rc_aug:
-    #     ds_train = combine_datasets(ds_train, ds_train2)
-    # if shift_aug:
-    #     ds_train = combine_datasets(ds_train, ds_train3)
-    train_loader = DataLoader(ds_train, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
-    test_loader = DataLoader(ds_test, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
-    return train_loader, None, test_loader
-
-
-# def load_nucleotide_transformer(root, batch_size, one_hot = True, valid_split=-1, dataset_name = 'enhancers', quantize=False, rc_aug = True, shift_aug=True):
-#     # Define a dictionary mapping dataset names to max_length
-#     max_length_dict = {
-#         "enhancers": 200,
-#         "enhancers_types": 200,  # nclass=3
-#         "H3": 500,
-#         "H3K4me1": 500,
-#         "H3K4me2": 500,
-#         "H3K4me3": 500,
-#         "H3K9ac": 500,
-#         "H3K14ac": 500,
-#         "H3K36me3": 500,
-#         "H3K79me3": 500,
-#         "H4": 500,
-#         "H4ac": 500,
-#         "promoter_all": 300,
-#         "promoter_no_tata": 300,
-#         "promoter_tata": 300,
-#         "splice_sites_acceptors": 600,
-#         "splice_sites_donors": 600,
-#         "splice_sites_all": 400
-#     }
-#     # Use the dictionary to get max_length
-#     max_length = max_length_dict.get(dataset_name)
-#     use_padding = True
-#     add_eos = False  # add end of sentence token
-#     tokenizer = CharacterTokenizer(
-#             characters=['A', 'C', 'G', 'T', 'N'],  # add DNA characters, N is uncertain
-#             model_max_length=max_length + 2,  # to account for special tokens, like EOS
-#             add_special_tokens=False,  # we handle special tokens elsewhere
-#             padding_side='left', # since HyenaDNA is causal, we pad on the left
-#         )
-#     ds_train = NucleotideTransformerDataset(
-#             max_length = max_length,
-#             dest_path = root + '/nucleotide_transformer_downstream_tasks',
-#             use_padding = use_padding,
-#             split = 'train',
-         
-#             tokenizer=tokenizer,
-#             dataset_name=dataset_name,
-#             rc_aug=False,
-#             add_eos=add_eos,
-#             one_hot=one_hot,
-#             quantize=quantize
-#         )
-#     ds_test = NucleotideTransformerDataset(
-#         max_length = max_length,
-#         dest_path = root+ '/nucleotide_transformer_downstream_tasks',
-#         use_padding = use_padding,
-#         split = 'test',
-#         tokenizer=tokenizer,
-#         dataset_name=dataset_name,
-#         rc_aug=False,
-#         add_eos=add_eos,
-#         one_hot=one_hot,
-#         quantize=quantize
-#         )
-        
-#     if shift_aug:
-#         ds_train3 = NucleotideTransformerDataset(
-#             max_length = max_length,
-#             dest_path=root + '/nucleotide_transformer_downstream_tasks',
-#             use_padding = use_padding,
-#             split = 'train',
-            
-#             tokenizer=tokenizer,
-#             dataset_name=dataset_name,
-#             rc_aug=True,
-#             add_eos=add_eos,
-#             one_hot=one_hot,
-#             quantize=quantize
-#         )
-#         # ds_train4 = NucleotideTransformerDataset(
-#         #     max_length = max_length,
-#         #     dest_path=root + '/nucleotide_transformer_downstream_tasks',
-#         #     use_padding = use_padding,
-#         #     split = 'train',
-            
-#         #     tokenizer=tokenizer,
-#         #     dataset_name=dataset_name,
-#         #     rc_aug=True,
-#         #     add_eos=add_eos,
-#         #     one_hot=one_hot,
-#         #     quantize=quantize
-#         # )
-#         ds_train3.shift=3
-#         # ds_train4.shift=1
-#         ds_train = combine_datasets(ds_train, ds_train3)
-#         # ds_train=combine_datasets(ds_train,ds_train4)
-#         #ds_test=interleave_datasets(ds_test,ds_test2)
-
-#     if rc_aug:
-#         ds_train2 = NucleotideTransformerDataset(
-#             max_length = max_length,
-#             dest_path=root + '/nucleotide_transformer_downstream_tasks',
-#             use_padding = use_padding,
-#             split = 'train',
-            
-#             tokenizer=tokenizer,
-#             dataset_name=dataset_name,
-#             rc_aug=True,
-#             add_eos=add_eos,
-#             one_hot=one_hot,
-#             quantize=quantize
-#         )
-#         ds_train = combine_datasets(ds_train, ds_train2)
-
-#     train_loader = DataLoader(ds_train, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=False)
-#     test_loader = DataLoader(ds_test, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=False)
-#     return train_loader, None, test_loader
-
-
-# def load_nucleotide_transformer(root, batch_size, one_hot = True, valid_split=True, dataset_name = "enhancers", quantize=False,rc_aug=True, shift_aug=True):
-#     max_length_dict = {
-#         "enhancers": 200,
-#         "enhancers_types": 200,  # nclass=3
-#         "H3": 500,
-#         "H3K4me1": 500,
-#         "H3K4me2": 500,
-#         "H3K4me3": 500,
-#         "H3K9ac": 500,
-#         "H3K14ac": 500,
-#         "H3K36me3": 500,
-#         "H3K79me3": 500,
-#         "H4": 500,
-#         "H4ac": 500,
-#         "promoter_all": 300,
-#         "promoter_no_tata": 300,
-#         "promoter_tata": 300,
-#         "splice_sites_acceptors": 600,
-#         "splice_sites_donors": 600,
-#         "splice_sites_all": 600
-#     }
-
-#     max_length = max_length_dict.get(dataset_name)
-                        
-#     def one_hot_encode(sequence):
-#       mapping = {'A': [1, 0, 0, 0, 0],
-#                 'C': [0, 1, 0, 0, 0],
-#                 'G': [0, 0, 1, 0, 0],
-#                 'T': [0, 0, 0, 1, 0],
-#                 'N': [0, 0, 0, 0, 1]}
-#     #   mapping = {'A': [1, 0, 0, 0],
-#     #             'C': [0, 1, 0, 0],
-#     #             'G': [0, 0, 1, 0],
-#     #             'T': [0, 0, 0, 1],
-#     #             'N': [0, 0, 0, 0]}
-#       return np.array([mapping[base] for base in sequence])
-
-#     def pad_sequences(sequences, maxlen, padding_value=0):
-#       padded_sequences = np.full((len(sequences), maxlen, 5), padding_value)
-#     #   padded_sequences = np.full((len(sequences), maxlen, 4), padding_value)
-#       for i, seq in enumerate(sequences):
-#           length = len(seq)
-#           padded_sequences[i, :length] = seq
-#       return padded_sequences
-
-#     class NTDataset(Dataset):
-#       def __init__(self, sequences, labels, max_length):
-#           self.sequences = [one_hot_encode(seq) for seq in sequences]
-#           self.sequences = pad_sequences(self.sequences, max_length)
-#           self.labels = labels
-
-#       def __len__(self):
-#           return len(self.sequences)
-
-#       def __getitem__(self, idx):
-#         #   print(idx)
-#           sequence = torch.tensor(self.sequences[idx], dtype=torch.float32).permute(1,0)
-#           label = torch.tensor(self.labels[idx], dtype=torch.long)
-#           return sequence, label
-
-#     train_dataset = load_dataset(
-#             "InstaDeepAI/nucleotide_transformer_downstream_tasks",
-#             dataset_name,
-#             split="train",
-#             streaming= False,
-#         )
-#     test_dataset = load_dataset(
-#             "InstaDeepAI/nucleotide_transformer_downstream_tasks",
-#             dataset_name,
-#             split="test",
-#             streaming= False,
-#         )
-#     # Get training data
-#     train_sequences = train_dataset['sequence']
-#     train_labels = train_dataset['label']
-
-#     if valid_split > 0:
-#       # Split the dataset into a training and a validation dataset
-#       print('Split the train dataset into a training and a validation dataset')
-#       train_sequences, validation_sequences, train_labels, validation_labels = train_test_split(train_sequences, train_labels, test_size=0.1, random_state=42)
-
-#     # Get test data
-#     test_sequences = test_dataset['sequence']
-#     test_labels = test_dataset['label']
-
-#     # Create datasets
-#     train_dataset = NTDataset(train_sequences, train_labels, max_length)
-#     test_dataset = NTDataset(test_sequences, test_labels, max_length)
-
-#     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-#     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-
-#     if valid_split > 0:
-#       validation_dataset = NTDataset(validation_sequences, validation_labels, max_length)
-#       valid_loader = DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
-#       return train_loader, valid_loader, test_loader
-
-#     return train_loader, None, test_loader
-
-
-def load_nucleotide_transformer(root, batch_size, one_hot=True, valid_split=False, dataset_name="enhancers", quantize=False, rc_aug=False, shift_aug=False):
-    max_length_dict = {
-        "enhancers": 200,
-        "enhancers_types": 200,  # nclass=3
-        "H3": 500,
-        "H3K4me1": 500,
-        "H3K4me2": 500,
-        "H3K4me3": 500,
-        "H3K9ac": 500,
-        "H3K14ac": 500,
-        "H3K36me3": 500,
-        "H3K79me3": 500,
-        "H4": 500,
-        "H4ac": 500,
-        "promoter_all": 300,
-        "promoter_no_tata": 300,
-        "promoter_tata": 300,
-        "splice_sites_acceptors": 600,
-        "splice_sites_donors": 600,
-        "splice_sites_all": 600
-    }
-
-    max_length = max_length_dict.get(dataset_name)
-    
-    complement_mapping = {'A': 'T', 'T': 'A', 'C': 'G', 'G': 'C', 'N': 'N'}
-    
-    def reverse_complement(sequence):
-        return ''.join([complement_mapping[base] for base in sequence[::-1]])
-
-    def shift_sequence(sequence, shift_amount):
-        shift_amount = shift_amount % len(sequence)  # Ensure the shift is within sequence length
-        return sequence[-shift_amount:] + sequence[:-shift_amount]
-
-    def one_hot_encode(sequence):
-        mapping = {'A': [1, 0, 0, 0, 0],
-                   'C': [0, 1, 0, 0, 0],
-                   'G': [0, 0, 1, 0, 0],
-                   'T': [0, 0, 0, 1, 0],
-                   'N': [0, 0, 0, 0, 1]}
-        return np.array([mapping[base] for base in sequence])
-
-    def pad_sequences(sequences, maxlen, padding_value=0):
-        padded_sequences = np.full((len(sequences), maxlen, 5), padding_value)
-        for i, seq in enumerate(sequences):
-            length = len(seq)
-            padded_sequences[i, :length] = seq
-        return padded_sequences
-
-    class NTDataset(Dataset):
-        def __init__(self, sequences, labels, max_length, rc_aug=False, shift_aug=False, quantize=quantize):
-            self.sequences = sequences
-            self.labels = labels
-            self.max_length = max_length
-            self.rc_aug = rc_aug
-            self.shift_aug = shift_aug
-            self.quantize = quantize
-            
-            # Augment and preprocess sequences
-            self.processed_sequences, self.processed_labels = self.augment_data()
-
-        def augment_data(self):
-            augmented_sequences = []
-            augmented_labels = []
-            
-            for i, sequence in enumerate(self.sequences):
-                # Add original sequence and label
-                augmented_sequences.append(self.preprocess(sequence))
-                augmented_labels.append(self.labels[i])
-
-                # Reverse complement augmentation
-                if self.rc_aug:
-                    rc_sequence = reverse_complement(sequence)
-                    augmented_sequences.append(self.preprocess(rc_sequence))
-                    augmented_labels.append(self.labels[i])
-
-                # Shift augmentation
-                if self.shift_aug:
-                    for shift_amount in range(3):  # Shifting 1-3 bases
-                        shifted_sequence = shift_sequence(sequence, shift_amount)
-                        augmented_sequences.append(self.preprocess(shifted_sequence))
-                        augmented_labels.append(self.labels[i])
-            
-            return augmented_sequences, augmented_labels
-
-        def preprocess(self, sequence):
-            # One-hot encoding and padding
-            return pad_sequences([one_hot_encode(sequence)], self.max_length)[0]
-
-        def __len__(self):
-            return len(self.processed_sequences)
-
-        def __getitem__(self, idx):
-            dtype = torch.bfloat16 if self.quantize else torch.float32
-            sequence = torch.tensor(self.processed_sequences[idx], dtype=dtype).permute(1, 0)
-            label = torch.tensor(self.processed_labels[idx], dtype=torch.long)
-            return sequence, label
-
-    # Load dataset
-    train_dataset = load_dataset(
-        "InstaDeepAI/nucleotide_transformer_downstream_tasks",
-        dataset_name,
-        split="train",
-        streaming=False,
-    )
-    test_dataset = load_dataset(
-        "InstaDeepAI/nucleotide_transformer_downstream_tasks",
-        dataset_name,
-        split="test",
-        streaming=False,
-    )
-
-    # Get training data
-    train_sequences = train_dataset['sequence']
-    train_labels = train_dataset['label']
-
-    if valid_split > 0 or  valid_split==True:
-        # Split the dataset into a training and a validation dataset
-        print('Split the train dataset into a training and a validation dataset')
-        train_sequences, validation_sequences, train_labels, validation_labels = train_test_split(train_sequences, train_labels, test_size=0.1, random_state=42)
-
-    # Get test data
-    test_sequences = test_dataset['sequence']
-    test_labels = test_dataset['label']
-
-    # Create datasets
-    train_dataset = NTDataset(train_sequences, train_labels, max_length, rc_aug=rc_aug, shift_aug=shift_aug)
-    test_dataset = NTDataset(test_sequences, test_labels, max_length)
-
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-
-    if valid_split > 0:
-        validation_dataset = NTDataset(validation_sequences, validation_labels, max_length)
-        valid_loader = DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
-        return train_loader, valid_loader, test_loader
-
-    return train_loader, None, test_loader
-
-# For test time augmentation
-
-def load_nucleotide_transformer_ttg(root, batch_size, one_hot = True, valid_split=-1, dataset_name = 'enhancers', quantize=False):
-    # Define a dictionary mapping dataset names to max_length
-    max_length_dict = {
-        "enhancers": 200,
-        "enhancers_types": 200,  # nclass=3
-        "H3": 500,
-        "H3K4me1": 500,
-        "H3K4me2": 500,
-        "H3K4me3": 500,
-        "H3K9ac": 500,
-        "H3K14ac": 500,
-        "H3K36me3": 500,
-        "H3K79me3": 500,
-        "H4": 500,
-        "H4ac": 500,
-        "promoter_all": 300,
-        "promoter_no_tata": 300,
-        "promoter_tata": 300,
-        "splice_sites_acceptors": 600,
-        "splice_sites_donors": 600,
-        "splice_sites_all": 400
-    }
-    # Use the dictionary to get max_length
-    max_length = max_length_dict.get(dataset_name)
-    use_padding = True
-    add_eos = False  # add end of sentence token
-    tokenizer = CharacterTokenizer(
-            characters=['A', 'C', 'G', 'T', 'N'],  # add DNA characters, N is uncertain
-            model_max_length=max_length + 2,  # to account for special tokens, like EOS
-            add_special_tokens=False,  # we handle special tokens elsewhere
-            padding_side='left', # since HyenaDNA is causal, we pad on the left
-        )
-
-    ds_test = NucleotideTransformerDataset(
-        max_length = max_length,
-        dest_path = root+ '/nucleotide_transformer_downstream_tasks',
-        use_padding = use_padding,
-        split = 'test',
-        tokenizer=tokenizer,
-        dataset_name=dataset_name,
-        rc_aug=False,
-        add_eos=add_eos,
-        one_hot=one_hot,
-        quantize=quantize
-        )
-    ds_test2 = NucleotideTransformerDataset(
-        max_length = max_length,
-        dest_path = root+ '/nucleotide_transformer_downstream_tasks',
-        use_padding = use_padding,
-        split = 'test',
-        tokenizer=tokenizer,
-        dataset_name=dataset_name,
-        rc_aug=True,
-        add_eos=add_eos,
-        one_hot=one_hot,
-        quantize=quantize
-        )
-        
-    
-    test_loader = DataLoader(ds_test, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=False)
-    test_loader_rc = DataLoader(ds_test2, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=False)
-    return test_loader, test_loader_rc
-
-from PIL import Image
-
-def make_dataset(image_list_path, domain):
-    image_list = open(image_list_path).readlines()
-    images = [(val.split()[0], int(val.split()[1]), int(domain)) for val in image_list]
-    return images
-
-def rgb_loader(path):
-    with open(path, 'rb') as f:
-        with Image.open(f) as img:
-            return img.convert('RGB')
-
-def load_domainnet(root, batch_size, valid_split=-1, domain_name='sketch'):
-    root += '/domainnet'
-    domain_label = 0
-
-    normalize_transform = transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-
-    train_transforms = transforms.Compose([
-                    transforms.Resize((256,256)),
-                    transforms.RandomCrop((224, 224)),
-                    transforms.RandomHorizontalFlip(),
-                    transforms.ToTensor(),
-                    normalize_transform
-                ])
-
-    test_transforms = transforms.Compose([
-                transforms.Resize((224, 224)),
-                transforms.ToTensor(),
-                normalize_transform
-            ])
-
-    imgs_train = make_dataset(os.path.join(root, domain_name + '_train_mini.txt'), domain_label)
-
-    while not os.path.exists(os.path.join(root, domain_name)):
-        cwd = os.getcwd()
-        os.chdir(root)
-        try:
-            os.system("wget http://csr.bu.edu/ftp/visda/2019/multi-source/groundtruth/" + domain_name + ".zip")
-            os.system("unzip -aq "+ domain_name + ".zip")
-        except:
-            pass
-        os.chdir(cwd)
-
-    xs, ys = [], []
-    for path, target, domain in imgs_train:
-        img = rgb_loader(os.path.join(root, path))
-        img = train_transforms(img)
-        target = torch.squeeze(torch.LongTensor([np.int64(target).item()]))
-        xs.append(img)
-        ys.append(target)
-
-    xs = torch.stack(xs, 0).float()
-    ys = torch.stack(ys, 0).squeeze().long()
-
-    train_dataset = torch.utils.data.TensorDataset(xs, ys)
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
-
-    imgs_test = make_dataset(os.path.join(root, domain_name + '_test_mini.txt'), domain_label)
-    xs, ys = [], []
-    for path, target, domain in imgs_test:
-        img = rgb_loader(os.path.join(root, path))
-        img = test_transforms(img)
-        target = torch.squeeze(torch.LongTensor([np.int64(target).item()]))
-        xs.append(img)
-        ys.append(target)
-
-    xs = torch.stack(xs, 0).float()
-    ys = torch.stack(ys, 0).squeeze().long()
-    
-    test_dataset = torch.utils.data.TensorDataset(xs, ys)
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
-
-    return train_loader, None, test_loader
-
-
-def load_imagenet(root, batch_size, workers=4, pin_memory=True, maxsize=None):
-    traindir = os.path.join(root, 'tiny-imagenet-200/train')
-    valdir = os.path.join(root, 'tiny-imagenet-200/val')
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std=[0.229, 0.224, 0.225])
-
-    train_dataset = datasets.ImageFolder(
-        traindir,
-        transforms.Compose([
-            transforms.RandomResizedCrop(224),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            normalize
-        ])
-    )
-    val_dataset = datasets.ImageFolder(
-        valdir,
-        transforms.Compose([
-            transforms.Resize(240),
-            transforms.CenterCrop(224),
-            transforms.ToTensor(),
-            normalize
-        ])
-    )
-
-    if maxsize is not None:
-        train_sampler, valid_sampler = split_dataset(train_dataset, maxsize)
-    else:
-        train_sampler, valid_sampler = None, None
-
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset,
-        batch_size=batch_size,
-        shuffle=maxsize is None,
-        num_workers=workers,
-        pin_memory=pin_memory,
-        sampler=train_sampler
-    )
-    val_loader = torch.utils.data.DataLoader(
-        val_dataset,
-        batch_size=batch_size,
-        shuffle=False,
-        num_workers=workers,
-        pin_memory=pin_memory,
-        sampler=valid_sampler
-    )
-    return train_loader, val_loader, val_loader
-
-
-def load_cifar(root, num_classes, batch_size, permute=False, seed=1111, valid_split=-1, maxsize=None):
-    if num_classes == 10:
-        normalize = transforms.Normalize(mean=[0.4914, 0.4822, 0.4465], std=[0.2023, 0.1994, 0.2010])
-    else:
-        normalize = transforms.Normalize(mean=[0.5071, 0.4867, 0.4408], std=[0.2675, 0.2565, 0.2761])
-    if permute:
-        np.random.seed(seed)
-        torch.manual_seed(seed)
-        permute = Permute2D(32, 32)
-        train_transforms = [transforms.RandomCrop(32, 4), transforms.RandomHorizontalFlip(), transforms.ToTensor(), permute, normalize]
-        val_transforms = [transforms.ToTensor(), permute, normalize]
-    else:
-        permute = None
-        train_transforms = [transforms.RandomCrop(32, 4), transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize] #transforms.Resize(224),
-        val_transforms = [transforms.ToTensor(), normalize]
-
-    cifar = datasets.CIFAR100 if num_classes == 100 else datasets.CIFAR10
-
-    train_dataset = cifar(root=root, train=True, transform=transforms.Compose(train_transforms), download=True)
-    test_dataset = cifar(root=root, train=False, transform=transforms.Compose(val_transforms))
-
-    if valid_split > 0:
-        valid_dataset = cifar(root=root, train=True, transform=transforms.Compose(val_transforms))
-        train_sampler, valid_sampler = split_dataset(train_dataset, len(test_dataset) / len(train_dataset))
-
-        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, sampler=train_sampler, num_workers=4, pin_memory=True)
-        val_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=batch_size, sampler=valid_sampler, num_workers=4, pin_memory=True)
-    elif maxsize is not None:
-        valid_dataset = cifar(root=root, train=True, transform=transforms.Compose(val_transforms))
-        train_sampler, valid_sampler = split_dataset(train_dataset, maxsize)
-        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, sampler=train_sampler, num_workers=4, pin_memory=True)
-        val_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=batch_size, sampler=valid_sampler, num_workers=4, pin_memory=True)
-    else:
-        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
-    
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
-
-    if valid_split > 0:
-        return train_loader, val_loader, test_loader
-    return train_loader, None, test_loader
-
-
-def load_mnist(root, batch_size, permute=False, seed=1111, valid_split=-1):
-    normalize = transforms.Normalize((0.1307,), (0.3081,))
-    flatten = transforms.Lambda(lambda x: x.view(-1, 784))
-    if permute:
-        np.random.seed(seed)
-        torch.manual_seed(seed)
-        permute = Permute1D(784)
-        train_transforms = [transforms.ToTensor(), normalize, flatten, permute]
-        val_transforms = [transforms.ToTensor(), normalize, flatten, permute]
-    else:
-        permute = None
-        train_transforms = [transforms.ToTensor(), normalize, flatten]
-        val_transforms = [transforms.ToTensor(), normalize, flatten]
-
-    train_dataset = datasets.MNIST(root=root, train=True, download=True, transform=transforms.Compose(train_transforms))
-    test_dataset = datasets.MNIST(root=root, train=False, download=True, transform=transforms.Compose(val_transforms))
-
-    if valid_split > 0:
-        valid_dataset = datasets.MNIST(root=root, train=True, transform=transforms.Compose(val_transforms))
-        train_sampler, valid_sampler = split_dataset(train_dataset, len(test_dataset) / len(train_dataset))
-
-        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, sampler=train_sampler, num_workers=4, pin_memory=True)
-        val_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=batch_size, sampler=valid_sampler, num_workers=4, pin_memory=True)
-
-    else:
-        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)     
-    
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
-    
-    if valid_split > 0:
-        return train_loader, val_loader, test_loader
-
-    return train_loader, None, test_loader
-
-
-def load_spherical(root, batch_size, valid_split=-1, maxsize=None):
-
-    if not os.path.isfile(root + '/s2_cifar100.gz'):
-        print("downloading data")
-        with open(root + '/s2_cifar100.gz', 'wb') as f:
-            f.write(requests.get("https://pde-xd.s3.amazonaws.com/spherical/s2_cifar100.gz").content)
-
-    with gzip.open(root + '/s2_cifar100.gz', 'rb') as f:
-        dataset = pickle.load(f)
-
-    train_data = torch.from_numpy(
-        dataset["train"]["images"][:, None, :, :].astype(np.float32)).squeeze() / 255.0
-    train_labels = torch.from_numpy(
-        dataset["train"]["labels"].astype(np.int64))
-
-    test_data = torch.from_numpy(
-        dataset["test"]["images"][:, None, :, :].astype(np.float32)).squeeze() / 255.0
-    test_labels = torch.from_numpy(
-        dataset["test"]["labels"].astype(np.int64))
-
-    if valid_split > 0:
-        test_size = len(test_labels)
-        shuffle_pid = np.random.permutation(len(train_labels))
-        train_data = train_data[shuffle_pid]
-        train_labels = train_labels[shuffle_pid]
-        train_data, val_data = train_data[:-test_size], train_data[-test_size:]
-        train_labels, val_labels = train_labels[:-test_size], train_labels[-test_size:]
-
-        val_dataset = torch.utils.data.TensorDataset(val_data, val_labels)
-        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
-
-    train_dataset = torch.utils.data.TensorDataset(train_data, train_labels)
-
-    if maxsize is not None:
-        train_sampler, valid_sampler = split_dataset(train_dataset, maxsize)
-        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, sampler=train_sampler, num_workers=4, pin_memory=True)
-        val_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, sampler=valid_sampler, num_workers=4, pin_memory=True)
-    else:
-        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
-    
-    test_dataset = torch.utils.data.TensorDataset(test_data, test_labels)
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
-
-    if valid_split > 0:
-        return train_loader, val_loader, test_loader
-    return train_loader, None, test_loader
-
-
-
-
-
-def load_darcy_flow(root, batch_size, sub = 5, valid_split=-1):
-    ntrain = 1000
-    ntest = 100
-    r = sub # 5, 3, 2, 1
-    h = int(((421 - 1)/r) + 1)
-    s = h
-
-    TRAIN_PATH = os.path.join(root, 'piececonst_r421_N1024_smooth1.mat')
-    TEST_PATH = os.path.join(root, 'piececonst_r421_N1024_smooth2.mat')
-
-    if not os.path.isfile(TRAIN_PATH):
-        print("downloading data")
-        with open(TRAIN_PATH, 'wb') as f:
-            f.write(requests.get("https://pde-xd.s3.amazonaws.com/piececonst_r421_N1024_smooth1.mat").content)
-        with open(TEST_PATH, 'wb') as f:
-            f.write(requests.get("https://pde-xd.s3.amazonaws.com/piececonst_r421_N1024_smooth2.mat").content)
-
-    reader = MatReader(TRAIN_PATH)
-    x_train = reader.read_field('coeff')[:ntrain,::r,::r][:,:s,:s]
-    y_train = reader.read_field('sol')[:ntrain,::r,::r][:,:s,:s]
-
-    if valid_split > 0:
-        x_train = reader.read_field('coeff')[:900,::r,::r][:,:s,:s]
-        y_train = reader.read_field('sol')[:900,::r,::r][:,:s,:s]
-        x_val = reader.read_field('coeff')[900:1000,::r,::r][:,:s,:s]
-        y_val = reader.read_field('sol')[900:1000,::r,::r][:,:s,:s]
-        ntrain = 900
-        nval = len(y_val)
-
-    reader.load_file(TEST_PATH)
-    x_test = reader.read_field('coeff')[:ntest,::r,::r][:,:s,:s]
-    y_test = reader.read_field('sol')[:ntest,::r,::r][:,:s,:s]
-
-    x_normalizer = UnitGaussianNormalizer(x_train)
-    x_train = x_normalizer.encode(x_train)
-    x_test = x_normalizer.encode(x_test)
-
-    y_normalizer = UnitGaussianNormalizer(y_train)
-    y_train = y_normalizer.encode(y_train)
-    y_test = y_normalizer.encode(y_test)
-
-    grids = []
-    grids.append(np.linspace(0, 1, s))
-    grids.append(np.linspace(0, 1, s))
-    grid = np.vstack([xx.ravel() for xx in np.meshgrid(*grids)]).T
-    grid = grid.reshape(1,s,s,2)
-    grid = torch.tensor(grid, dtype=torch.float)
-    x_train = torch.cat([x_train.reshape(ntrain,s,s,1), grid.repeat(ntrain,1,1,1)], dim=3)
-    x_test = torch.cat([x_test.reshape(ntest,s,s,1), grid.repeat(ntest,1,1,1)], dim=3)
-
-    if valid_split > 0:
-        x_val = x_normalizer.encode(x_val)
-        y_val = y_normalizer.encode(y_val)
-        x_val = torch.cat([x_val.reshape(nval,s,s,1), grid.repeat(nval,1,1,1)], dim=3)
-
-    x_train = x_train.permute(0, 3, 1, 2)
-    x_test = x_test.permute(0, 3, 1, 2)
-    if valid_split > 0:
-        x_val = x_val.permute(0, 3, 1, 2)
-
-    train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_train, y_train), batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
-
-    test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_test, y_test), batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
-
-    if valid_split > 0:
-        val_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_val, y_val), batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
-        return train_loader, val_loader, test_loader, y_normalizer
-
-    return train_loader, None, test_loader, y_normalizer
-
-
-def load_psicov(root, batch_size, valid_split=-1, training_window=512):
-    expected_n_channels = 57
-    pad_size = 10
-
-    all_feat_paths = [root + '/protein/deepcov/features/', root + '/protein/psicov/features/', root + '/protein/cameo/features/']
-    all_dist_paths = [root + '/protein/deepcov/distance/', root + '/protein/psicov/distance/', root + '/protein/cameo/distance/']
-
-    deepcov_list = load_list(root + '/protein/deepcov.lst', -1)
-
-    length_dict = {}
-    for pdb in deepcov_list:
-        (ly, seqy, cb_map) = np.load(root + '/protein/deepcov/distance/' + pdb + '-cb.npy', allow_pickle = True)
-        length_dict[pdb] = ly
-
-    psicov_list = load_list(root + '/protein/psicov.lst')
-    psicov_length_dict = {}
-    for pdb in psicov_list:
-        (ly, seqy, cb_map) = np.load(root + '/protein/psicov/distance/' + pdb + '-cb.npy', allow_pickle = True)
-        psicov_length_dict[pdb] = ly
-
-    train_pdbs = deepcov_list
-
-    if valid_split > 0:
-        test_pdbs = psicov_list[:int(0.5 * len(psicov_list))]
-        valid_pdbs = psicov_list[int(0.5 * len(psicov_list)):]
-        valid_dataset = PDNetDataset(valid_pdbs, all_feat_paths, all_dist_paths, 512, pad_size, 1, expected_n_channels, label_engineering = None)
-        val_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
-    else:
-        test_pdbs = psicov_list
-
-    train_dataset = PDNetDataset(train_pdbs, all_feat_paths, all_dist_paths, training_window, pad_size, batch_size, expected_n_channels, label_engineering = '16.0')
-    test_dataset = PDNetDataset(test_pdbs, all_feat_paths, all_dist_paths, 512, pad_size, 1, expected_n_channels, label_engineering = None)
-
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=1, pin_memory=True)
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=1, pin_memory=True)
-
-    if valid_split > 0:
-        return train_loader, val_loader, test_loader, psicov_list, psicov_length_dict
-
-    return train_loader, None, test_loader, psicov_list, psicov_length_dict
-
-import scipy.io
-from sklearn.model_selection import train_test_split
-
-def load_ecg(root, batch_size, valid_split=-1):
-    window_size = 1000
-    stride = 500
-
-    # read pkl
-    with open(root + '/challenge2017.pkl', 'rb') as fin:
-        res = pickle.load(fin)
-    ## scale data
-    all_data = res['data']
-    for i in range(len(all_data)):
-        tmp_data = all_data[i]
-        tmp_std = np.std(tmp_data)
-        tmp_mean = np.mean(tmp_data)
-        all_data[i] = (tmp_data - tmp_mean) / tmp_std
-    ## encode label
-    all_label = []
-    for i in res['label']:
-        if i == 'N':
-            all_label.append(0)
-        elif i == 'A':
-            all_label.append(1)
-        elif i == 'O':
-            all_label.append(2)
-        elif i == '~':
-            all_label.append(3)
-    all_label = np.array(all_label)
-
-    # split train test
-    if valid_split > 0:
-        X_train, X_test, Y_train, Y_test = train_test_split(all_data, all_label, test_size=0.2, random_state=0)
-        X_val, X_test, Y_val, Y_test = train_test_split(X_test, Y_test, test_size=0.5, random_state=0)
-        X_val, Y_val = slide_and_cut(X_val, Y_val, window_size=window_size, stride=stride)
-
-        shuffle_pid = np.random.permutation(Y_val.shape[0])
-        X_val = X_val[shuffle_pid]
-        Y_val = Y_val[shuffle_pid]
-        X_val = torch.from_numpy(np.expand_dims(X_val, 1)).float()
-        Y_val = torch.from_numpy(Y_val).long()
-
-        val_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(X_val, Y_val), batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
-
-    else:    
-        X_train, X_test, Y_train, Y_test = train_test_split(all_data, all_label, test_size=0.1, random_state=0)
-
-    X_train, Y_train = slide_and_cut(X_train, Y_train, window_size=window_size, stride=stride)
-    X_test, Y_test = slide_and_cut(X_test, Y_test, window_size=window_size, stride=stride)
-
-    shuffle_pid = np.random.permutation(Y_train.shape[0])
-    X_train = X_train[shuffle_pid]
-    Y_train = Y_train[shuffle_pid]
-
-    shuffle_pid = np.random.permutation(Y_test.shape[0])
-    X_test = X_test[shuffle_pid]
-    Y_test = Y_test[shuffle_pid]
-
-    X_train = torch.from_numpy(np.expand_dims(X_train, 1)).float() 
-    X_test = torch.from_numpy(np.expand_dims(X_test, 1)).float() 
-    Y_train = torch.from_numpy(Y_train).long()
-    Y_test = torch.from_numpy(Y_test).long()
-
-    train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(X_train, Y_train), batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
-    
-    test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(X_test, Y_test), batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
-
-    if valid_split > 0:
-        return train_loader, val_loader, test_loader
-
-    return train_loader, None, test_loader
-
-
-def load_satellite(root, batch_size, valid_split=-1):
-    path = root
-
-    train_file = os.path.join(path, 'satellite_train.npy')
-    test_file = os.path.join(path, 'satellite_test.npy')
-
-    if not os.path.isfile(train_file):
-        with open(train_file, 'wb') as f:
-            f.write(requests.get("https://pde-xd.s3.amazonaws.com/satellite/satellite_train.npy").content)
-        with open(test_file, 'wb') as f:
-            f.write(requests.get("https://pde-xd.s3.amazonaws.com/satellite/satellite_test.npy").content)
-
-    X_training, Y_training = np.load(train_file, allow_pickle=True)[()]['data'], np.load(train_file,allow_pickle=True)[()]['label']
-    X_test, Y_test = np.load(test_file, allow_pickle=True)[()]['data'], np.load(test_file, allow_pickle=True)[()]['label']
-    Y_training = Y_training - 1
-    Y_test = Y_test - 1
-
-    if valid_split > 0:
-        shuffle_pid = np.random.permutation(Y_training.shape[0])
-        X_training = X_training[shuffle_pid]
-        Y_training = Y_training[shuffle_pid]
-
-        len_val = len(Y_test)
-        X_training, Y_training = X_training[:-len_val], Y_training[:-len_val]
-        X_validation, Y_validation = X_training[-len_val:], Y_training[-len_val:]
-
-        X_validation = torch.from_numpy(np.expand_dims(X_validation, 1)).float()
-        Y_validation = torch.from_numpy(Y_validation).long()
-
-        val_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(X_validation, Y_validation), batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
-
-    X_training = torch.from_numpy(np.expand_dims(X_training, 1)).float()
-    Y_training = torch.from_numpy(Y_training).long()
-    X_test = torch.from_numpy(np.expand_dims(X_test, 1)).float()
-    Y_test = torch.from_numpy(Y_test).long()
-
-    train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(X_training, Y_training), batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
-    test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(X_test, Y_test), batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
-
-    if valid_split > 0:
-        return train_loader, val_loader, test_loader
-
-    return train_loader, None, test_loader
-
-
-def load_ninapro(root, batch_size, valid_split=-1, maxsize=None):
-
-    path = root + '/ninaPro'
-    train_data = np.load(os.path.join(path, 'ninapro_train.npy'),
-                                 encoding="bytes", allow_pickle=True)
-    train_labels = np.load(os.path.join(path, 'label_train.npy'), encoding="bytes", allow_pickle=True).astype(np.int8)
-
-    valid_data = np.load(os.path.join(path, 'ninapro_val.npy'),
-                                 encoding="bytes", allow_pickle=True)
-    valid_labels = np.load(os.path.join(path, 'label_val.npy'), encoding="bytes", allow_pickle=True).astype(np.int8)
-
-    test_data = np.load(os.path.join(path, 'ninapro_test.npy'),
-                                 encoding="bytes", allow_pickle=True)
-    test_labels = np.load(os.path.join(path, 'label_test.npy'), encoding="bytes", allow_pickle=True).astype(np.int8)
-    
-    if valid_split > 0:
-        valid_data = torch.from_numpy(valid_data).float().permute(0, 2, 1)
-        valid_labels = torch.from_numpy(valid_labels).long()
-    else:
-        train_data = np.concatenate((train_data, valid_data), axis=0)
-        train_labels = np.concatenate((train_labels, valid_labels), axis=0).astype(np.int8)
-    
-    if maxsize is not None:
-        train_data = train_data[:maxsize, ...]
-        train_labels = train_labels[:maxsize]
-
-    train_data = torch.from_numpy(train_data).float().permute(0, 2, 1)
-    train_labels = torch.from_numpy(train_labels).long()#.unsqueeze(-1)
-    test_data = torch.from_numpy(test_data).float().permute(0, 2, 1)
-    test_labels = torch.from_numpy(test_labels).long()#.unsqueeze(-1)
-
-    train_data = train_data.unsqueeze(1)
-    test_data = test_data.unsqueeze(1)
-
-    from torchvision.transforms.autoaugment import AutoAugmentPolicy
-
-    augmentation = None
-    augmentation_test = None
-
-    if valid_split > 0:
-        valid_data = valid_data.unsqueeze(1)
-
-    train_loader = torch.utils.data.DataLoader(CustomTensorDataset((train_data, train_labels), transform=augmentation), batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
-    test_loader = torch.utils.data.DataLoader(CustomTensorDataset((test_data, test_labels), transform=augmentation_test), batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
-
-    if valid_split > 0:
-        val_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(valid_data, valid_labels), batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
-        return train_loader, val_loader, test_loader
-
-    return train_loader, None, test_loader
-
 def load_text(root, batch_size, valid_split=-1, maxsize=None):
     path = root
 
@@ -1599,8 +827,6 @@ def load_text_large(root, batch_size, valid_split=-1, maxsize=None):
 def load_text_llama(root, batch_size, valid_split=-1, maxsize=None):
     path = root
 
-    # file_path = os.path.join(path, 'text_xs.npy')
-
     train_data = np.load(os.path.join(path, 'text_xs_llama_embeddings.npy'), allow_pickle =True)
 
     maxsize = len(train_data) if maxsize is None else maxsize
@@ -1612,8 +838,6 @@ def load_text_llama(root, batch_size, valid_split=-1, maxsize=None):
 
 def load_text_llama2(root, batch_size, valid_split=-1, maxsize=None):
     path = root
-
-    # file_path = os.path.join(path, 'text_xs.npy')
 
     train_data = np.load(os.path.join(path, 'text_xs_llama2_embeddings.npy'), allow_pickle =True)
 
@@ -1630,7 +854,6 @@ def load_text_xs_flan_t5_small(root, batch_size, valid_split=-1, maxsize=None):
 
     maxsize = len(train_data) if maxsize is None else maxsize
     train_data = torch.from_numpy(train_data[:maxsize]).float()
-    # train_labels = torch.from_numpy(train_labels[:maxsize]).long()
 
     train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(train_data), batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
     return train_loader, None, train_loader
@@ -1641,7 +864,6 @@ def load_text_xs_flan_t5_base(root, batch_size, valid_split=-1, maxsize=None):
 
     maxsize = len(train_data) if maxsize is None else maxsize
     train_data = torch.from_numpy(train_data[:maxsize]).float()
-    # train_labels = torch.from_numpy(train_labels[:maxsize]).long()
 
     train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(train_data), batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
     return train_loader, None, train_loader
@@ -1652,7 +874,6 @@ def load_text_xs_flan_t5_large(root, batch_size, valid_split=-1, maxsize=None):
 
     maxsize = len(train_data) if maxsize is None else maxsize
     train_data = torch.from_numpy(train_data[:maxsize]).float()
-    # train_labels = torch.from_numpy(train_labels[:maxsize]).long()
 
     train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(train_data), batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
     return train_loader, None, train_loader
@@ -1662,7 +883,7 @@ def load_text_xs_pythia_1b(root, batch_size, valid_split=-1, maxsize=None):
     train_data = np.load(os.path.join(path, 'text_xs_pythia-1b_embeddings.npy'), allow_pickle =True)
     maxsize = len(train_data) if maxsize is None else maxsize
     train_data = torch.from_numpy(train_data[:maxsize]).float()
-    # train_labels = torch.from_numpy(train_labels[:maxsize]).long()
+
     train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(train_data), batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
     return train_loader, None, train_loader
     
@@ -1694,311 +915,6 @@ def load_hg38(root, batch_size, valid_split=-1, maxsize=None):
     train_loader = torch.utils.data.DataLoader(dataset = feats, batch_size = batch_size, shuffle=True, num_workers=4, pin_memory=True)
     return train_loader, None, train_loader
 
-def load_cosmic(root, batch_size, valid_split=-1):
-    aug_sky=[-0.9, 3]
-    path = root + '/cosmic'
-    train_dirs = np.load(os.path.join(path, 'train_dirs.npy'),allow_pickle=True)
-    test_dirs = np.load(os.path.join(path, 'test_dirs.npy'),allow_pickle =True)
-
-    if valid_split > 0:
-        test_size = len(test_dirs)
-        shuffle_pid = np.random.permutation(train_dirs.shape[0])
-        train_dirs = train_dirs[shuffle_pid]
-        train_dirs, val_dirs = train_dirs[:-test_size], train_dirs[-test_size:]
-        data_val = PairedDatasetImagePath(root, val_dirs[::], aug_sky[0], aug_sky[1], part=None)
-        val_loader = torch.utils.data.DataLoader(data_val, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
-
-    data_train = PairedDatasetImagePath(root, train_dirs[::], aug_sky[0], aug_sky[1], part=None)
-    data_test = PairedDatasetImagePath(root, test_dirs[::], aug_sky[0], aug_sky[1], part=None)
-
-    train_loader = torch.utils.data.DataLoader(data_train, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)       
-    test_loader = torch.utils.data.DataLoader(data_test, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
-
-    train_loader = torch.utils.data.DataLoader(data_train, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)       
-    test_loader = torch.utils.data.DataLoader(data_test, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
-
-    if valid_split > 0:
-        return train_loader, val_loader, test_loader
-
-    return train_loader, None, test_loader
-
-
-def load_fsd(root, batch_size, valid_split=-1):
-
-    from utils import BackgroundAddMixer, UseMixerWithProb, get_transforms_fsd_chunks, SpectrogramDataset, FSD50kEvalDataset
-
-    feature='mel'
-
-    path = '/run/determined/workdir/shared_fs/data' 
-    meta_root = os.path.join(path, "chunks")
-    train_manifest = "tr.csv"
-    val_manifest = "val.csv"
-    label_map = "lbl_map.json"
-    test_manifest = 'eval.csv'
-
-    train_manifest = os.path.join(meta_root, train_manifest)
-    val_manifest = os.path.join(meta_root, val_manifest)
-    test_manifest = os.path.join(meta_root, test_manifest)
-    label_map = os.path.join(meta_root, label_map)
-
-    bg_files = os.path.join(path, "noise_22050")
-
-    if feature == 'mel':
-        audio_config = {
-            'feature': 'melspectrogram',
-            'sample_rate': 22050,
-            'min_duration': 1,
-            'bg_files': bg_files,
-        }
-    elif feature == 'raw':
-        audio_config = {
-            'feature': 'spectrogram',
-            'n_fft': 441,
-            'hop_len': 220,
-            'normalize': False,
-            'sample_rate': 22050,
-            'min_duration': 1,
-            'bg_files': bg_files,
-        }
-    else:
-        raise KeyError
-
-    mixer = BackgroundAddMixer()
-    train_mixer = UseMixerWithProb(mixer, 0.75)
-    train_transforms = get_transforms_fsd_chunks(True, 101)
-    val_transforms = get_transforms_fsd_chunks(False, 101)
-
-    train_set = SpectrogramDataset(train_manifest,
-                                        label_map,
-                                        audio_config,
-                                        mode="multilabel", augment=True,
-                                        mixer=train_mixer,
-                                        transform=train_transforms)
-
-    val_set = FSD50kEvalDataset(val_manifest, label_map,
-                                     audio_config,
-                                     transform=val_transforms
-                                     )
-
-    test_set = FSD50kEvalDataset(test_manifest, label_map,
-                                 audio_config,
-                                 transform=val_transforms)
-
-    val_loader = val_set
-    test_loader = test_set
-
-    xs, ys = [], []
-
-    for i in range(train_set.len):
-        x, y = train_set.__getitem__(i)[0], train_set.__getitem__(i)[1]
-        if x.shape != (1, 96, 102): continue
-        xs.append(x)
-        ys.append(y)
-
-    xs = torch.stack(xs, 0).float()
-    ys = torch.stack(ys, 0).float()
-
-    train_set = torch.utils.data.TensorDataset(xs, ys)
-    train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
-
-    if valid_split > 0:
-        return train_loader, val_loader, test_loader
-
-    return train_loader, None, test_loader
-
-def load_pde(root, batch_size, dataset='1DCFD', valid_split=-1, num_workers=4):
-    large = False
-
-    if dataset == 'Burgers':
-        filename = '1D_Burgers_Sols_Nu1.0.hdf5' 
-
-        reduced_resolution = 1 
-        reduced_resolution_t = 5
-        reduced_batch = 1
-        initial_step = 10
-        t_train = 200
-        single_file = True
-
-    elif dataset == '1DCFD':
-        root = '/run/determined/workdir/shared_fs/data/PDEBench'
-        filename = '1D_CFD_Rand_Eta0.1_Zeta0.1_periodic_Train.hdf5'
-        reduced_resolution = 1
-        reduced_resolution_t = 5
-        reduced_batch = 1
-        initial_step = 10
-        t_train = 100
-        single_file = True
-
-    elif dataset == 'ADV':
-        root = '/run/determined/workdir/shared_fs/data/PDEBench'
-        filename = '1D_Advection_Sols_beta0.4.hdf5'
-        reduced_resolution = 4
-        reduced_resolution_t = 5
-        reduced_batch = 1
-        initial_step = 10
-        t_train = 200
-        single_file = True 
-
-    elif dataset == 'DS':
-        root = '/run/determined/workdir/shared_fs/data/PDEBench'
-        filename = '1D_diff-sorp_NA_NA.h5'
-        reduced_resolution = 1
-        reduced_resolution_t = 1
-        reduced_batch = 1
-        initial_step = 10
-        t_train = 101
-        single_file = False 
-
-    elif dataset == 'RD':
-        root = '/run/determined/workdir/shared_fs/data/PDEBench'
-        filename = 'ReacDiff_Nu0.5_Rho1.0.hdf5'
-        reduced_resolution = 1
-        reduced_resolution_t = 1
-        reduced_batch = 1
-        initial_step = 5
-        t_train = 30
-        single_file = True 
-
-    elif dataset == 'SW':
-        filename = '2D_rdb_NA_NA.h5'
-        reduced_resolution = 1
-        reduced_resolution_t = 1
-        reduced_batch = 1
-        initial_step = 10
-        t_train = 101
-        single_file = False
-
-    elif dataset == 'Darcy':
-        root = '/run/determined/workdir/shared_fs/data/PDEBench'
-        filename = '2D_DarcyFlow_beta0.1_Train.hdf5'
-        reduced_resolution = 2
-        reduced_resolution_t = 1
-        reduced_batch = 1
-        initial_step = 10
-        t_train = 1000
-        single_file = True
-
-    elif dataset == 'RD2D':
-        root = '/run/determined/workdir/shared_fs/data/PDEBench'
-        filename = '2D_diff-react_NA_NA.h5'
-        reduced_resolution = 1
-        reduced_resolution_t = 1
-        reduced_batch = 1
-        initial_step = 10
-        t_train = 101
-        single_file = False
-
-    elif dataset == '2DCFD':
-        root = '/run/determined/workdir/shared_fs/data/PDEBench'
-        filename = '2D_CFD_Rand_M1.0_Eta0.1_Zeta0.1_periodic_128_Train.hdf5'
-        reduced_resolution = 2
-        reduced_resolution_t = 1
-        reduced_batch = 1
-        initial_step = 10
-        t_train = 21
-        single_file = True
-        large = True
-    
-    if single_file:
-        if large:
-            train_data = UNetDatasetSingleLarge(filename,
-                                    saved_folder=root,
-                                    reduced_resolution=reduced_resolution,
-                                    reduced_resolution_t=reduced_resolution_t,
-                                    reduced_batch=reduced_batch,
-                                    initial_step=initial_step, t_train=t_train)
-
-            val_data = UNetDatasetSingleLarge(filename,
-                                  saved_folder=root,
-                                  reduced_resolution=reduced_resolution,
-                                  reduced_resolution_t=reduced_resolution_t,
-                                  reduced_batch=reduced_batch,
-                                  initial_step=initial_step,
-                                  if_test=True, x_normalizer=train_data.x_normalizer)
-
-        else:
-            train_data = UNetDatasetSingle(filename,
-                                        saved_folder=root,
-                                        reduced_resolution=reduced_resolution,
-                                        reduced_resolution_t=reduced_resolution_t,
-                                        reduced_batch=reduced_batch,
-                                        initial_step=initial_step, t_train=t_train)
-
-            val_data = UNetDatasetSingle(filename,
-                                      saved_folder=root,
-                                      reduced_resolution=reduced_resolution,
-                                      reduced_resolution_t=reduced_resolution_t,
-                                      reduced_batch=reduced_batch,
-                                      initial_step=initial_step,
-                                      if_test=True)
-    else:
-        train_data = UNetDatasetMult(filename,
-                                    saved_folder=root,
-                                    reduced_resolution=reduced_resolution,
-                                    reduced_resolution_t=reduced_resolution_t,
-                                    reduced_batch=reduced_batch,
-                                    initial_step=initial_step, t_train=t_train)
-
-        val_data = UNetDatasetMult(filename,
-                                  saved_folder=root,
-                                  reduced_resolution=reduced_resolution,
-                                  reduced_resolution_t=reduced_resolution_t,
-                                  reduced_batch=reduced_batch,
-                                  initial_step=initial_step,
-                                  if_test=True)
-
-    if dataset == '1DCFD':
-        x_normalizer = UnitGaussianNormalizer(train_data.x)
-        train_data.x = x_normalizer.encode(train_data.x)
-        val_data.x = x_normalizer.encode(val_data.x)
-
-        y_normalizer = x_normalizer
-        train_data.y = y_normalizer.encode(train_data.y)
-        val_data.y = y_normalizer.encode(val_data.y)
-
-    train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size,
-                                               num_workers=num_workers, shuffle=True)
-    test_loader = torch.utils.data.DataLoader(val_data, batch_size=batch_size,
-                                             num_workers=num_workers, shuffle=False)
-    return train_loader, None, test_loader
-
-
-def load_openml(root, batch_size, did, valid_split=-1, num_workers=4, get_shape=False):
-    try:
-        import openml
-    except:
-        os.system("pip install openml")
-        import openml
-
-    mixup = False
-    index = 0
-    if mixup:
-        fname = root + f'/{did}_dev_test_split_mixup.npy'    
-    else:
-        fname = root + f'/{did}_dev_test_split.npy'
-    if not os.path.isfile(fname):
-        prepare_data(root, did, context=False, mixup=mixup)
-   
-    data = np.load(fname, allow_pickle=True)
-    data = data.item()
-    if data['X_norm_dev'].shape[-1] != 1:
-        X_train, X_test = torch.from_numpy(data['X_norm_dev']).float().permute(0, 2, 1), torch.from_numpy(data['X_norm_test']).float().permute(0, 2,1)
-    else:
-        X_train, X_test = torch.from_numpy(data['X_norm_dev']).float(), torch.from_numpy(data['X_norm_test']).float()
-
-        if did == 54 or did == 1068 or did == 1494 or did == 12:
-            x_normalizer = UnitGaussianNormalizer(X_train)
-            X_train = x_normalizer.encode(X_train)
-            X_test = x_normalizer.encode(X_test)
-        if did == 1464:
-            X_train, X_test = X_train[:, (0, 1, 3), :], X_test[:, (0, 1, 3), :]
-
-    y_train, y_test = torch.from_numpy(data['y_dev']).long(), torch.from_numpy(data['y_test']).long()
-
-    train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(X_train, y_train), batch_size=batch_size, num_workers=num_workers, shuffle=True)
-    test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(X_test, y_test), batch_size=batch_size, num_workers=num_workers, shuffle=False)
-
-    return train_loader, None, test_loader
 
 
 from sklearn.model_selection import StratifiedShuffleSplit
@@ -2210,25 +1126,6 @@ def build_input_vector(input_data, cell_features, drug_features):
     return feature
 
 
-def load_drug(root, batch_size, dataset, valid_split=-1, num_workers=4):
-    if dataset == 'CTRP':
-        train_feature = np.load(root + '/drug_sep/' + "ctrp_train_feat.npy")
-        train_label = np.load(root + '/drug_sep/' + "ctrp_train_label.npy")
-        test_feature = np.load(root + '/drug_sep/' + "ctrp_test_feat.npy")
-        test_label = np.load(root + '/drug_sep/' + "ctrp_test_label.npy")
-    else:
-        train_feature = np.load(root + '/drug_sep/' + "gdsc_train_feat.npy")
-        train_label = np.load(root + '/drug_sep/' + "gdsc_train_label.npy")
-        test_feature = np.load(root + '/drug_sep/' + "gdsc_test_feat.npy")
-        test_label = np.load(root + '/drug_sep/' + "gdsc_test_label.npy")
-    train_feature = torch.from_numpy(train_feature)
-    train_label = torch.from_numpy(train_label)
-    test_feature = torch.from_numpy(test_feature)
-    test_label = torch.from_numpy(test_label)
-
-    train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(train_feature, train_label), batch_size=batch_size, num_workers=num_workers, shuffle=True)
-    test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(test_feature, test_label), batch_size=batch_size, num_workers=num_workers, shuffle=False)
-    return train_loader, None, test_loader
 
 
 class UNetDatasetSingle(Dataset):

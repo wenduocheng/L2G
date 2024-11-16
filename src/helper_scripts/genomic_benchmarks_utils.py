@@ -91,13 +91,6 @@ class CharacterTokenizer(PreTrainedTokenizer):
         )
 
         self._vocab_str_to_int = {  #
-            # "[CLS]": 0, 
-            # "[SEP]": 1,
-            # "[BOS]": 2,
-            # "[MASK]": 3,
-            # "[PAD]": 4,
-            # "[RESERVED]": 5,
-            # "[UNK]": 6,
             "[CLS]": 4, 
             "[SEP]": 4,
             "[BOS]": 4,
@@ -227,10 +220,9 @@ class GenomicBenchmarkDataset(torch.utils.data.Dataset):
         self.tokenizer_name = tokenizer_name
         self.tokenizer = tokenizer
         self.return_augs = return_augs
-        # self.add_eos = add_eos
-        self.d_output = d_output  # 
+        self.d_output = d_output   
         self.rc_aug = rc_aug
-        self.one_hot  = one_hot #
+        self.one_hot  = one_hot 
         self.quantize = quantize
         self.truncate = truncate
         self.shift = 0
@@ -241,7 +233,6 @@ class GenomicBenchmarkDataset(torch.utils.data.Dataset):
         else:
             print("already downloaded {}-{}".format(split, dataset_name))
 
-        # use Path object
         base_path = Path(dest_path) / dataset_name / split
 
         self.all_paths = []
@@ -291,11 +282,10 @@ class GenomicBenchmarkDataset(torch.utils.data.Dataset):
             seq = seq.permute(1,0) #
             seq = seq.type(torch.FloatTensor)
             if self.quantize:
-                seq = seq.to(torch.bfloat16) # bfloat16
+                seq = seq.to(torch.bfloat16) 
             if self.truncate:
                 seq=seq[:self.truncate,...]
         else:
-            # seq = torch.LongTensor(seq)
             seq = torch.FloatTensor(seq).unsqueeze(0)
             if self.truncate:
                 seq = seq[:,:self.truncate]
@@ -316,8 +306,7 @@ class GenomicBenchmarkDataset(torch.utils.data.Dataset):
                 else:
                     seq[:,:self.shift]=4
 
-        # need to wrap in list
-        target = torch.LongTensor([y]).squeeze()  #
+        target = torch.LongTensor([y]).squeeze()  
 
         return seq, target
 
@@ -335,7 +324,6 @@ class NucleotideTransformerDataset(torch.utils.data.Dataset):
         split,
         max_length,
         dataset_name=None,
-        # d_output=2, # default binary classification
         dest_path=None,
         tokenizer=None,
         tokenizer_name=None,
@@ -343,7 +331,6 @@ class NucleotideTransformerDataset(torch.utils.data.Dataset):
         add_eos=False,
         rc_aug=False,
         return_augs=False,
-        # return_mask=False,
         one_hot=False, #
         quantize=False, #
         truncate=None, #
@@ -355,9 +342,7 @@ class NucleotideTransformerDataset(torch.utils.data.Dataset):
         self.tokenizer = tokenizer
         self.return_augs = return_augs
         self.add_eos = add_eos
-        # self.d_output = d_output  # needed for decoder to grab
         self.rc_aug = rc_aug
-        # self.return_mask = return_mask
         self.one_hot  = one_hot #
         self.quantize = quantize
         self.truncate = truncate
@@ -367,7 +352,6 @@ class NucleotideTransformerDataset(torch.utils.data.Dataset):
         if split == "val":
             split = "test"
 
-        # use Path object
         base_path = Path(dest_path) / dataset_name 
         assert base_path.exists(), 'path to fasta file must exist'
 
@@ -388,8 +372,7 @@ class NucleotideTransformerDataset(torch.utils.data.Dataset):
         x = self.seqs[seq_id][:].seq # only one sequence
         y = self.label_mapper[idx][1] # 0 or 1 for binary classification
 
-        # apply rc_aug here if using
-        if self.rc_aug: # and coin_flip():
+        if self.rc_aug: 
             x = string_reverse_complement(x)
 
         seq = self.tokenizer(x,
@@ -398,18 +381,6 @@ class NucleotideTransformerDataset(torch.utils.data.Dataset):
             max_length=self.max_length,
             truncation=True,
         )
-        # seq_ids = seq["input_ids"]  # get input_ids
-
-        # seq_ids = torch.LongTensor(seq_ids)
-
-        # # convert to tensor
-        # seq = torch.LongTensor(seq)  # hack, remove the initial cls tokens for now
-
-        # # need to wrap in list
-        # target = torch.LongTensor([y])  # offset by 1, includes eos
-
-        # return seq_ids, target
-
 
         seq = seq["input_ids"]
         if self.one_hot: 
@@ -422,7 +393,6 @@ class NucleotideTransformerDataset(torch.utils.data.Dataset):
             if self.truncate:
                 seq=seq[:self.truncate,...]
         else:
-            # seq = torch.LongTensor(seq)
             seq = torch.FloatTensor(seq).unsqueeze(0)
             if self.truncate:
                 seq = seq[:,:self.truncate]
@@ -443,27 +413,7 @@ class NucleotideTransformerDataset(torch.utils.data.Dataset):
                 else:
                     seq[:,:self.shift]=4
 
-        # need to wrap in list
-        target = torch.LongTensor([y]).squeeze()  #
+        target = torch.LongTensor([y]).squeeze()  
 
         return seq, target
 
-# name maxlen classes samples metric
-
-# enhancer 200   2  14968 MCC
-# enhancer_types 200   3  14968 MCC
-# H3 500   2  13468 MCC
-# H3K4me1  500   2  28509 MCC
-# H3K4me2  500   2  27614 MCC
-# H3K4me3  500   2  33119 MCC
-# H3K9ac   500   2  25003 MCC
-# H3K14ac  500   2  29743 MCC
-# H3K36me3 500   2  31392 MCC
-# H3K79me3 500   2  25953 MCC
-# H4 500   2  13140 MCC
-# H4ac  500   2  30685 MCC
-# promoter_all   300   2  53276 F1
-# promoter_non_tata 300   2  47759 F1
-# promoter_tata  300   2  5517  F1
-# splice_sites_acceptor   600   2  19961 F1
-# splice_sites_donor   600   2  19775 F1

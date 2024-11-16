@@ -13,17 +13,12 @@ from utils import count_params, count_trainable_params, calculate_stats
 from embedder import get_tgt_model
 from data_loaders import load_nucleotide_transformer_ttg
 
-# torch.cuda.set_device(4)
-# from accelerate import Accelerator # 
-# accelerator = Accelerator() #
-
-
-
+# torch.cuda.set_device(0)
 
 def main(use_determined, args, info=None, context=None):
 
     args.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    # args.device = accelerator.device # accelerate
+ 
     print("device:", args.device)
     root = '/datasets' if use_determined else './src/datasets'
 
@@ -82,7 +77,6 @@ def main(use_determined, args, info=None, context=None):
     embedder_stats = embedder_stats if embedder_stats_saved is None else embedder_stats_saved
     train_time = []
     
-    # model, optimizer, train_loader, scheduler = accelerator.prepare(model, optimizer, train_loader, scheduler) # accelerate
 
     print("\n------- Start Training --------" if ep_start == 0 else "\n------- Resume Training --------")
     print("param count (before fine tuning):", count_params(model), count_trainable_params(model))
@@ -107,7 +101,8 @@ def main(use_determined, args, info=None, context=None):
 
             print('configs:',configs)
             import wandb
-            wandb.login(key=args.wandb_key)
+            from wandb_key import key # import your own wandb key!
+            wandb.login(key=key)
             print('wandb login')
             run = wandb.init(
                 # Set the project where this run will be logged
@@ -131,8 +126,7 @@ def main(use_determined, args, info=None, context=None):
         train_time_ep = default_timer() -  time_start 
 
         if ep % args.validation_freq == 0 or ep == args.epochs + args.predictor_epochs - 1: 
-                
-            # val_loss, val_score = evaluate(context, args, model, val_loader, loss, metric, n_val, decoder, transform, fsd_epoch=ep if args.dataset == 'FSD' else None)
+
             val_loss, val_score = evaluate(args, model, val_loader, loss, metric)
             train_losses.append(train_loss)
             train_score.append(val_score)
@@ -168,7 +162,6 @@ def main(use_determined, args, info=None, context=None):
             test_scores = []
             test_model = model
             test_time_start = default_timer()
-            # test_loss, test_score = evaluate(context, args, test_model, test_loader, loss, metric, n_test, decoder, transform, fsd_epoch=200 if args.dataset == 'FSD' else None)
             test_loss, test_score = evaluate(args, test_model, test_loader, loss, metric)
             test_time_end = default_timer()
             test_scores.append(test_score)
@@ -177,7 +170,6 @@ def main(use_determined, args, info=None, context=None):
             
             test_model, _, _, _, _, _ = load_state(use_determined, args, context, test_model, optimizer, scheduler, n_train, id_best, test=True)
             test_time_start = default_timer()
-            # test_loss, test_score = evaluate(context, args, test_model, test_loader, loss, metric, n_test, decoder, transform, fsd_epoch=200 if args.dataset == 'FSD' else None)
             test_loss, test_score = evaluate(args, test_model, test_loader, loss, metric)
             test_time_end = default_timer()
             test_scores.append(test_score)
@@ -220,19 +212,13 @@ def train_one_epoch(context, args, model, optimizer, scheduler, loader, loss, te
     for i, data in enumerate(loader):
 
         x, y = data
-        #print(x,x.max(),x.min(),x.mean())
-        #print(y,y.max(),y.min(),y.float().mean())
-            
-        x, y = x.to(args.device), y.to(args.device) # accelerate
+        x, y = x.to(args.device), y.to(args.device) 
         out = model(x)
-        #print((out.argmax(-1)==y).float().mean())
-        # right += (y==out.argmax(-1)).float().sum()  # if using accuracy, count how many out is correct (=y)
-        # alldata += len(x)
+
 
         if label_smoothing_factor != 0:
             y = y * (1 - label_smoothing_factor) + label_smoothing_factor * (1 - y)
       
-        # print('out:',out.size(),'y:', y.size())
         l = loss(out, y)
         
         l.backward()
@@ -251,11 +237,11 @@ def train_one_epoch(context, args, model, optimizer, scheduler, loader, loss, te
 
         if i >= temp - 1:
             break
-        #break
+
 
     if (not args.lr_sched_iter):
         scheduler.step()
-    # print(right/alldata)
+
     return train_loss / temp
 
 
@@ -317,8 +303,6 @@ def evaluate(args, model, loader, loss, metric):
     with torch.no_grad():
         for i, data in enumerate(loader):
             x, y = data
-            #print("eval",x,x.min(),x.max(),x.mean())
-            #print("eval",y,y.min(),y.max(),y.float().mean())
                                 
             x, y = x.to(args.device), y.to(args.device) 
 
@@ -326,15 +310,11 @@ def evaluate(args, model, loader, loss, metric):
 
             outs.append(out) 
             ys.append(y)
-            #print("eval",(out.argmax(-1)==y).float().mean())
             n_data += x.shape[0]
-        
-        
+    
         outs = torch.cat(outs, 0)
         ys = torch.cat(ys, 0)
-        # print("eval total",(outs.argmax(-1)==ys).float().mean(),mc(ys.detach().cpu().numpy(),outs.argmax(-1).detach().cpu().numpy()))
         eval_loss += loss(outs, ys).item()
-
         eval_score += metric(outs, ys).item()
 
     return eval_loss, eval_score

@@ -4,49 +4,47 @@ environment:
         gpu: docker.io/junhongshen/nb360:updatenew
 hyperparameters:
     dataset: deepstarr
-    embedder_dataset: text # hg38, text, text_roberta_large, text_llama, text_llama2, text_pythia_1b, text_flan_t5_small, text_flan_t5_base, text_flan_t5_large
-    objective: MMD # otdd-exact, MMD
-    weight: roberta # roberta, hyenadna-small-32k-seqlen, roberta-large, c, pythia-1b, llama, llama2, flan-t5-small, flan-t5-base, flan-t5-large
-    nlayers: full # one, full
-    maxsamples: 256 # 64, 256
-    target_seq_len: 256 # 512 for roberta, 2048 for llama, 4096 for llama2, 2048 for pythia-1b, 1024 for flan t5
+    embedder_dataset: text 
+    objective: MMD 
+    weight: roberta 
+    nlayers: full 
+    maxsamples: 256 
+    target_seq_len: 256 
 
-    experiment_id: 20
+    experiment_id: 0
 
     seed: 0
-    epochs: 25 # 13
-    pretrain_epochs: 0 # 0, 20
-    embedder_epochs: 0 # 60, 20
+    epochs: 25 
+    pretrain_epochs: 20 
+    embedder_epochs: 60 
     predictor_epochs: 0
 
     joint_optim: True
-    alpha: 1 # weight for otdd 
-    beta: 1 # weight for bce
-    finetune_method: all # all, lora, freeze
-    one_hot: True  # one hot encoding
+    alpha: 1 # weight for alignment loss 
+    beta: 1 # weight for task loss
+    finetune_method: all , lora, freeze
+    one_hot: True  
     run_dash: False
     # lora_task_type: "SEQ_CLS"
-    lora_r: 12 # 12
-    lora_alpha: 32 # 32
+    lora_r: 12 
+    lora_alpha: 32 
     lora_dropout: 0.1
     lora_target_modules: ["q_proj", "v_proj"]
 
-    drop_out: 0.2 #0
+    drop_out: 0.2 
     label_smoothing_factor: 0
     activation: None
     rc_aug: True # reverse complement augmentation
     shift_aug: False # shift augmentation
 
-    use_wandb: True
-    wandb_key: "ef4b923327eb2a110fda334efee4ec80feee4bc7" # add your own wandb key
+    use_wandb: False
     data_parallel: False
     quantize: False
 
-    embedder_type: "unet" # dash-->resnet, unet, dash random
-    embedder_init: "random" # random, pretrained
+    embedder_type: "unet" 
+    embedder_init: "random"
     ks: [11, 11, 11, 3, 3, 3, 15, 3, 3]   
     ds: [1, 1, 1, 1, 1, 1, 1, 1, 1]
-    emedder_path: None
     
 
     
@@ -59,7 +57,7 @@ hyperparameters:
     optimizer:
         name: Adam
         params:
-            lr: 0.00005 # 0.00001 for pythia-1b, 0.001   
+            lr: 0.00005    
             betas: [0.9, 0.98] 
             weight_decay: 0.00001
             momentum: 0.99
@@ -67,7 +65,7 @@ hyperparameters:
     embedder_optimizer:
         name: Adam
         params:
-            lr: 0.001 # 0.000005
+            lr: 0.001 
             betas: [0.9, 0.98] 
             weight_decay: 0.0005
             momentum: 0.99

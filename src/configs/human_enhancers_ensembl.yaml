@@ -10,22 +10,22 @@ hyperparameters:
     maxsamples: 256
     target_seq_len: 128
 
-    experiment_id: 26
+    experiment_id: 0
 
     seed: 0
-    epochs: 20 # 13
-    pretrain_epochs: 0 # 0, 20
+    epochs: 20 
+    pretrain_epochs: 0 
     embedder_epochs: 60 # 60
     predictor_epochs: 0
 
     joint_optim: True
     alpha: 0.01 # weight for otdd 
-    beta: 1 # weight for bce
+    beta: 1 # weight for task loss
     finetune_method: all
     one_hot: False
 
-    lora_r: 12 # 12
-    lora_alpha: 32 # 32
+    lora_r: 12 
+    lora_alpha: 32 
     lora_dropout: 0.1
     lora_target_modules: ["q_proj", "v_proj"]
 
@@ -35,8 +35,7 @@ hyperparameters:
     rc_aug: True # reverse complement augmentation
     shift_aug: True # shift augmentation
     
-    use_wandb: True
-    wandb_key: "ef4b923327eb2a110fda334efee4ec80feee4bc7"
+    use_wandb: False
     data_parallel: False
     quantize: False
 
@@ -44,7 +43,6 @@ hyperparameters:
     embedder_init: "random"
     ks: [9, 11, 7, 3, 3, 3, 11, 11, 11] 
     ds: [1, 1, 1, 1, 1, 1, 7, 5, 5]
-    emedder_path: "/home/wenduoc/DASH/src_ablations/results_acc/human_enhancers_ensembl/default/0/3/network_weights.pt"
 
     batch_size: 64
     eval_batch_size: 1000

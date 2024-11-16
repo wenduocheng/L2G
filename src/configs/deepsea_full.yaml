@@ -5,28 +5,28 @@ environment:
 hyperparameters:
     dataset: DEEPSEA_FULL
     embedder_dataset: text
-    objective: MMD # otdd-exact, MMD
+    objective: MMD 
     weight: roberta
     nlayers: full
     maxsamples: 128 # 256
     target_seq_len: 128 
 
-    experiment_id: 233
+    experiment_id: 0
 
     seed: 0
-    epochs: 20 # 13
+    epochs: 20 
     pretrain_epochs: 0 # 0
     embedder_epochs: 20 #60
     predictor_epochs: 0
 
     joint_optim: True
     alpha: 0.01 # weight for otdd 
-    beta: 1 # weight for bce
-    finetune_method: all # all, lora, freeze
-    one_hot: True # one hot encoding
+    beta: 1 # weight for task loss
+    finetune_method: all , lora, freeze
+    one_hot: True 
 
-    lora_r: 12 # 12
-    lora_alpha: 32 # 32
+    lora_r: 12 
+    lora_alpha: 32 
     lora_dropout: 0.1
     lora_target_modules: ["q_proj", "v_proj"]
 
@@ -36,17 +36,15 @@ hyperparameters:
     rc_aug: False # reverse complement augmentation
     shift_aug: False  # shift augmentation
 
-    use_wandb: True
-    wandb_key: "ef4b923327eb2a110fda334efee4ec80feee4bc7" # add your own wandb key
+    use_wandb: False
     data_parallel: False
     quantize: True
 
-    embedder_type: "resnet" # dash-->resnet, unet, dash random
-    embedder_init: "pretrained" # random, pretrained
+    embedder_type: "resnet" 
+    embedder_init: "pretrained" 
     ks: [15, 19, 19, 7, 7, 7, 19, 19, 19]  
     ds: [1, 15, 15, 1, 1, 1, 15, 15, 15]
     # channels: [16, 16, 32, 64]
-    emedder_path: "/home/wenduoc/ORCA/clean/gene-orca/pretrained_embedders/DEEPSEA_FULL_pretrained_model_2.pth"
     
     batch_size: 128
     eval_batch_size: 1000

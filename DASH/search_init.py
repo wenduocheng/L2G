@@ -62,6 +62,7 @@ def main():
     exp_id = 'baseline' if args.baseline else args.experiment_id
     args.save_dir = os.path.join(args.save_dir, 'results_acc/'  + args.dataset + '/' + "search_init" +'/' + exp_id + "/" + str(args.seed))
     if not os.path.exists(args.save_dir):
+        print(args.save_dir)
         os.makedirs(args.save_dir)
 
     if args.retrain_only and args.hp_dir == '':

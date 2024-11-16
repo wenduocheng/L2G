@@ -8,8 +8,9 @@ import os
 # import data loaders, task-specific losses and metrics
 import sys 
 sys.path.append('./')
-from src.data_loaders import load_imagenet, load_text, load_cifar, load_mnist, load_deepsea, load_darcy_flow, load_psicov, load_ecg, load_satellite, load_ninapro, load_cosmic, load_spherical, load_fsd, load_domainnet, load_pde, load_openml, load_drug
-from src.data_loaders import load_nucleotide_transformer,load_genomic_benchmarks, load_deepsea_full, load_deepstarr, load_deepstarr_dev, load_deepstarr_hk, load_hg38, load_text_large, load_text_llama, load_text_llama2,load_text_xs_pythia_1b, load_text_xs_flan_t5_small, load_text_xs_flan_t5_base, load_text_xs_flan_t5_large #
+# from src.data_loaders import load_imagenet, load_text, load_cifar, load_mnist, load_deepsea, load_darcy_flow, load_psicov, load_ecg, load_satellite, load_ninapro, load_cosmic, load_spherical, load_fsd, load_domainnet, load_pde, load_openml, load_drug
+from src.data_loaders import load_nucleotide_transformer,load_genomic_benchmarks, load_deepsea_full, load_deepstarr, load_deepstarr
+from src.data_loaders import load_hg38, load_text_large, load_text_llama, load_text_llama2,load_text_xs_pythia_1b, load_text_xs_flan_t5_small, load_text_xs_flan_t5_base, load_text_xs_flan_t5_large #
 from src.utils import FocalLoss, LpLoss, conv_init, get_params_to_update, set_param_grad, set_grad_state
 from src.utils import mask, accuracy, accuracy_onehot, auroc, psicov_mae, ecg_f1, fnr, map_value, inv_auroc, r2_score, inverse_score, auc_metric, nmse, rmse_loss, nrmse_loss 
 from src.utils import binary_f1, mcc, pcc, pcc_deepstarr
@@ -24,10 +25,6 @@ def get_data(root, dataset, batch_size, valid_split, maxsize=None, get_shape=Fal
         train_loader, val_loader, test_loader = load_genomic_benchmarks(root, batch_size, one_hot = one_hot, valid_split=valid_split, dataset_name = dataset, quantize=quantize,rc_aug=rc_aug, shift_aug=shift_aug)
     elif dataset in ['enhancers', 'enhancers_types', 'H3', 'H3K4me1', 'H3K4me2', 'H3K4me3', 'H3K9ac', 'H3K14ac', 'H3K36me3', 'H3K79me3', 'H4', 'H4ac', 'promoter_all', 'promoter_no_tata', 'promoter_tata', 'splice_sites_acceptors', 'splice_sites_donors','splice_sites_all']: 
         train_loader, val_loader, test_loader = load_nucleotide_transformer(root, batch_size, one_hot = one_hot, valid_split=valid_split, dataset_name = dataset, quantize=quantize,rc_aug=rc_aug, shift_aug=shift_aug)
-    elif dataset == "deepstarr_dev":
-        train_loader, val_loader, test_loader = load_deepstarr_dev(root, batch_size,one_hot = one_hot, valid_split=valid_split,rc_aug=rc_aug, shift_aug=shift_aug)
-    elif dataset == "deepstarr_hk":
-        train_loader, val_loader, test_loader = load_deepstarr_hk(root, batch_size,one_hot = one_hot, valid_split=valid_split,rc_aug=rc_aug, shift_aug=shift_aug)
     elif dataset == "deepstarr":
         train_loader, val_loader, test_loader = load_deepstarr(root, batch_size,one_hot = one_hot, valid_split=valid_split, quantize=quantize, rc_aug=rc_aug, shift_aug=shift_aug)
     elif dataset == "DEEPSEA":
@@ -50,48 +47,6 @@ def get_data(root, dataset, batch_size, valid_split, maxsize=None, get_shape=Fal
         train_loader, val_loader, test_loader = load_text_xs_flan_t5_large(root, batch_size, maxsize=maxsize)
     elif dataset == "text_pythia_1b":
         train_loader, val_loader, test_loader = load_text_xs_pythia_1b(root, batch_size, maxsize=maxsize)  
-    elif dataset == "DOMAINNET":
-        train_loader, val_loader, test_loader = load_domainnet(root, batch_size, valid_split=valid_split)
-    elif dataset == "IMAGENET":
-        train_loader, val_loader, test_loader = load_imagenet(root, batch_size, maxsize=maxsize)
-    elif dataset == "text":
-        train_loader, val_loader, test_loader = load_text(root, batch_size, maxsize=maxsize)
-    elif dataset == "CIFAR10":
-        train_loader, val_loader, test_loader = load_cifar(root, 10, batch_size, valid_split=valid_split, maxsize=maxsize)
-    elif dataset == "CIFAR10-PERM":
-        train_loader, val_loader, test_loader = load_cifar(root, 10, batch_size, permute=True, valid_split=valid_split, maxsize=maxsize)
-    elif dataset == "CIFAR100":
-        train_loader, val_loader, test_loader = load_cifar(root, 100, batch_size, valid_split=valid_split, maxsize=maxsize)
-    elif dataset == "CIFAR100-PERM":
-        train_loader, val_loader, test_loader = load_cifar(root, 100, batch_size, permute=True, valid_split=valid_split, maxsize=maxsize)
-    elif dataset == "MNIST":
-        train_loader, val_loader, test_loader = load_mnist(root, batch_size, valid_split=valid_split)
-    elif dataset == "MNIST-PERM":
-        train_loader, val_loader, test_loader = load_mnist(root, batch_size, permute=True, valid_split=valid_split)
-    elif dataset == "SPHERICAL":
-        train_loader, val_loader, test_loader = load_spherical(root, batch_size, valid_split=valid_split, maxsize=maxsize)
-    elif dataset == "DARCY-FLOW-5":
-        train_loader, val_loader, test_loader, y_normalizer = load_darcy_flow(root, batch_size, sub = 5, valid_split=valid_split)
-        data_kwargs = {"decoder": y_normalizer}
-    elif dataset == 'PSICOV':
-        train_loader, val_loader, test_loader, _, _ = load_psicov(root, batch_size, valid_split=valid_split)
-    elif dataset == "ECG":
-        train_loader, val_loader, test_loader = load_ecg(root, batch_size, valid_split=valid_split)
-    elif dataset == "SATELLITE":
-        train_loader, val_loader, test_loader = load_satellite(root, batch_size, valid_split=valid_split)
-    elif dataset == "NINAPRO":
-        train_loader, val_loader, test_loader = load_ninapro(root, batch_size, valid_split=valid_split, maxsize=maxsize)
-    elif dataset == "COSMIC":
-        train_loader, val_loader, test_loader = load_cosmic(root, batch_size, valid_split=valid_split)
-        data_kwargs = {'transform': mask}
-    elif dataset == "FSD":
-        train_loader, val_loader, test_loader = load_fsd(root, batch_size, valid_split=valid_split)
-    elif dataset[:3] == 'PDE':
-        train_loader, val_loader, test_loader = load_pde(root, batch_size, dataset=dataset[4:], valid_split=valid_split)
-    elif dataset[:6] == 'OPENML':
-        train_loader, val_loader, test_loader = load_openml(root, batch_size, int(dataset[6:]), valid_split=valid_split, get_shape=get_shape)
-    elif dataset[:4] == 'DRUG':
-        train_loader, val_loader, test_loader = load_drug(root, batch_size, dataset[5:], valid_split=valid_split)
 
     n_train, n_val, n_test = len(train_loader), len(val_loader) if val_loader is not None else 0, len(test_loader)
 
@@ -158,60 +113,8 @@ def get_config(root, args):
             sample_shape[1] = 1
             sample_shape = tuple(sample_shape)
    
-    # elif dataset == "DOMAINNET":
-    #     dims, sample_shape, num_classes = 1, (1, 3, 224, 224), 40
-    #     loss = nn.CrossEntropyLoss()
-
-    # elif dataset[:5] == "CIFAR":
-    #     dims, sample_shape, num_classes = 2,  (1, 3, 32, 32), 10 if dataset in ['CIFAR10', 'CIFAR10-PERM'] else 100
-    #     loss = nn.CrossEntropyLoss()
-
-    # elif dataset == 'SPHERICAL':
-    #     dims, sample_shape, num_classes = 2, (1, 3, 60, 60), 100
-    #     loss = nn.CrossEntropyLoss() 
-
-    # elif dataset == "DARCY-FLOW-5":
-    #     dims, sample_shape, num_classes = 2, (1, 3, 85, 85), 1
-    #     loss = LpLoss(size_average=False)
-    #     args.infer_label = True
-
-    # elif dataset == "PSICOV":
-    #     dims, sample_shape, num_classes = 2, (1, 57, 512, 512), 1
-    #     loss = nn.MSELoss(reduction='mean')
-    #     args.infer_label = True
-
-    # elif dataset == "NINAPRO": 
-    #     dims, sample_shape, num_classes = 2, (1, 1, 16, 52), 18
-    #     loss = FocalLoss(alpha=1)
-
-    # elif dataset == "COSMIC":
-    #     dims, sample_shape, num_classes = 2, (1, 1, 128, 128), 1
-    #     loss = nn.BCEWithLogitsLoss()
-    #     args.infer_label = True
-
-    # elif dataset == 'FSD':
-    #     dims, sample_shape, num_classes = 2, (1, 1, 96, 102), 200
-    #     loss = nn.BCEWithLogitsLoss(pos_weight=10 * torch.ones((200, )))
-    #     args.infer_label = True
-        
-    # elif dataset[:5] == "MNIST":
-    #     dims, sample_shape, num_classes = 1, (1, 1, 784), 10
-    #     loss = F.nll_loss
-    
-    # elif dataset == "ECG": 
-    #     dims, sample_shape, num_classes = 1, (1, 1, 1000), 4
-    #     loss = nn.CrossEntropyLoss()   
-
-    # elif dataset == "SATELLITE":
-    #     dims, sample_shape, num_classes = 1, (1, 1, 46), 24
-    #     loss = nn.CrossEntropyLoss()
 
     elif dataset == "DEEPSEA":
-        # dims, sample_shape, num_classes = 1, (1, 4, 1000), 36
-        # loss = nn.BCEWithLogitsLoss(pos_weight=4 * torch.ones((36, )))
-        # # loss = nn.CrossEntropyLoss()
-        # args.infer_label = True
-
         dims, sample_shape, num_classes = 1, (1, 4, 1000), 36
         loss = nn.BCEWithLogitsLoss(pos_weight=4 * torch.ones((36, )))
         # loss = nn.CrossEntropyLoss()
@@ -221,7 +124,7 @@ def get_config(root, args):
             sample_shape = list(sample_shape)
             sample_shape[1] = 1
             sample_shape = tuple(sample_shape)
-            # loss = nn.BCEWithLogitsLoss(pos_weight=1 * torch.ones((36, )))
+            loss = nn.BCEWithLogitsLoss(pos_weight=1 * torch.ones((36, )))
 
     elif dataset == "DEEPSEA_FULL":
         dims, sample_shape, num_classes = 1, (1, 4, 1000), 919
@@ -231,7 +134,7 @@ def get_config(root, args):
             sample_shape = list(sample_shape)
             sample_shape[1] = 1
             sample_shape = tuple(sample_shape)
-            # loss = nn.BCEWithLogitsLoss(pos_weight=1 * torch.ones((919, )))
+            loss = nn.BCEWithLogitsLoss(pos_weight=1 * torch.ones((919, )))
     
     elif dataset == "deepstarr_dev" or dataset == "deepstarr_hk":
         dims, sample_shape, num_classes = 1, (1, 4, 249), 1
@@ -252,28 +155,6 @@ def get_config(root, args):
     return dims, sample_shape, num_classes, loss, args
 
 
-# def get_metric(root, dataset):
-#     if dataset == "your_new_task": # modify this to experiment with a new task
-#         return inverse_score(accuracy), np.min
-#     if dataset in ["dummy_mouse_enhancers_ensembl", "demo_coding_vs_intergenomic_seqs", "demo_human_or_worm", "human_enhancers_cohn", "human_enhancers_ensembl", "human_ensembl_regulatory", "human_nontata_promoters", "human_ocr_ensembl"]:  
-#         return inverse_score(accuracy), np.min
-#     if dataset in ['enhancers', 'enhancers_types', 'H3', 'H3K4me1', 'H3K4me2', 'H3K4me3', 'H3K9ac', 'H3K14ac', 'H3K36me3', 'H3K79me3', 'H4', 'H4ac']: 
-#         return inverse_score(mcc), np.min # to be changed
-#     if dataset in ['promoter_all', 'promoter_no_tata', 'promoter_tata', 'splice_sites_acceptors', 'splice_sites_donors', 'splice_sites_all']: 
-#         # return inverse_score(binary_f1), np.min
-#         return inverse_score(mcc), np.min
-    
-
-#     if dataset == "DEEPSEA":
-#         return inverse_score(auroc), np.min
-#     if dataset == "DEEPSEA_FULL":
-#         return inverse_score(auroc), np.min
-    
-#     if dataset == "deepstarr":
-#         return inverse_score(pcc_deepstarr), np.min
-
-#     if dataset == "deepstarr_dev" or dataset == "deepstarr_hk":
-#         return inverse_score(pcc), np.min
 
 def get_metric(root, dataset):
     if dataset == "your_new_task": # modify this to experiment with a new task
@@ -283,20 +164,20 @@ def get_metric(root, dataset):
     if dataset in ['enhancers', 'enhancers_types', 'H3', 'H3K4me1', 'H3K4me2', 'H3K4me3', 'H3K9ac', 'H3K14ac', 'H3K36me3', 'H3K79me3', 'H4', 'H4ac']: 
         return mcc, np.max 
     if dataset in ['promoter_all', 'promoter_no_tata', 'promoter_tata', 'splice_sites_acceptors', 'splice_sites_donors', 'splice_sites_all']: 
-        return mcc, np.max
-    
-
+        # return mcc, np.max
+        return binary_f1, np.max
+    if dataset in ['splice_sites_all']: 
+        # return mcc, np.max
+        return accuracy, np.max
     if dataset == "DEEPSEA":
         return auroc, np.max
     if dataset == "DEEPSEA_FULL":
         return auroc, np.max
-    
     if dataset == "deepstarr":
         return pcc_deepstarr, np.max
         # return pcc, np.max
 
-    if dataset == "deepstarr_dev" or dataset == "deepstarr_hk":
-        return pcc, np.max
+
 
 
 def get_optimizer(name, params):
@@ -410,15 +291,6 @@ def get_optimizer_scheduler(args, model, module=None, n_train=1):
     
         if hasattr(args,'embedder_optimizer'):
             if args.run_dash:
-                # for embedder_type in ["wrn", "unet", "deepsea"]:
-                #     try:
-                #         dash_result_path = f"./dash_results/results_acc/{args.dataset}/search_init/{embedder_type}/{args.seed}/dash_final_results.npy"
-                #         print(f"Checking path for embedder architecture: {embedder_type}")
-                #         # If successful, break the loop
-                #         break
-                #     except Exception as e:
-                #         print(f"An error occurred for architecture {embedder_type}: {e}")
-                #         continue
                 for embedder_type in ["unet", "wrn", "deepsea"]:
                     dash_result_path = f"./dash_results/results_acc/{args.dataset}/search_init/{embedder_type}/{args.seed}/dash_final_results.npy"
                     print(f"Checking path for embedder architecture: {embedder_type}")
@@ -464,11 +336,7 @@ def get_optimizer_scheduler(args, model, module=None, n_train=1):
         embedder_optimizer_params = copy.deepcopy(args.optimizer.params)
         if embedder_optimizer_params['lr'] <= 0.001:
             embedder_optimizer_params['lr'] *= 10
-        # embedder_optimizer_params['lr'] = 0.01
         print('embedder optimizer',embedder_optimizer_params)
-        # args.optimizer.name = 'SGD'
-        # args.momentum = 0.99
-        # args.weight_decay = 0.0005
         embedder_optimizer = get_optimizer(args.optimizer.name, embedder_optimizer_params)(get_params_to_update(model, ""))
         lr_lambda, _ = get_scheduler(args.no_warmup_scheduler.name, args.no_warmup_scheduler.params, args.embedder_epochs, 1)
         embedder_scheduler = torch.optim.lr_scheduler.LambdaLR(embedder_optimizer, lr_lambda=lr_lambda)

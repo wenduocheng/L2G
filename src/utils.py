@@ -781,55 +781,24 @@ def embedder_init(source, target, train_embedder=False, match_stats=False, args=
             target.norm.bias.data.copy_(source.norm.bias.data)
 
         else:
-            if args != None:
-                if args.embedder_type == "resnet" and (hasattr(args,'embedder_init')==False or args.embedder_init=='random'):
-                    print('Resnet searched by dash')
-                    print('Randomly initialition')
-                elif args.embedder_type == "resnet" and args.embedder_init=='pretrained':
-                    print('Resnet searched by dash')
-                    print('Load weights from pretrained embedder')
-                    trained_dash = torch.load(args.emedder_path, map_location=device)
-                    print('checkpoint parameters:', trained_dash.keys())
-                    if args.dataset == 'DEEPSEA_FULL':
-                        trained_dash['model_state_dict'].pop('final.weight')
-                        trained_dash['model_state_dict'].pop('final.bias')
-                        target.dash.load_state_dict(trained_dash['model_state_dict'], strict=False)
-                    else:
-                        trained_dash.pop('final.weight')
-                        trained_dash.pop('final.bias')
+            # if args != None:
+            #     if args.embedder_type == "resnet" and (hasattr(args,'embedder_init')==False or args.embedder_init=='random'):
+            #         print('Resnet searched by dash')
+            #         print('Randomly initialition')
+            #     elif args.embedder_type == "resnet" and args.embedder_init=='pretrained':
+            #         print('Resnet searched by dash')
+            #         print('Load weights from pretrained embedder')
+            #         trained_dash = torch.load(args.emedder_path, map_location=device)
+            #         print('checkpoint parameters:', trained_dash.keys())
+            #         if args.dataset == 'DEEPSEA_FULL':
+            #             trained_dash['model_state_dict'].pop('final.weight')
+            #             trained_dash['model_state_dict'].pop('final.bias')
+            #             target.dash.load_state_dict(trained_dash['model_state_dict'], strict=False)
+            #         else:
+            #             trained_dash.pop('final.weight')
+            #             trained_dash.pop('final.bias')
                         
-                        target.dash.load_state_dict(trained_dash, strict=False)
-                elif args.embedder_type == "unet":
-                    print('Unet default')
-                    print('Randomly initialition')
-                elif args.embedder_type == "unet-dash" and args.embedder_init=='random':
-                    print('Unet searched by dash')
-                    print('Randomly initialition')
-                elif args.embedder_type == "unet-dash" and args.embedder_init=='pretrained':
-                    print('Unet searched by dash')
-                    print('Load weights from pretrained embedders')
-                    trained_dash = torch.load(args.emedder_path, map_location=device)
-                    trained_dash.pop('final.weight')
-                    trained_dash.pop('final.bias')
-                    trained_dash.pop('dnaemb.weight')
-                    # trained_dash.pop('dnaemb.bias')
-                    print('checkpoint parameters:', trained_dash.keys())
-                    target.fno.load_state_dict(trained_dash, strict=False)
-                elif args.embedder_type == "deepsea" and args.embedder_init=='pretrained':
-                    print('deepsea embedder')
-                    print('Load weights from pretrained embedders')
-                    trained_deepsea = torch.load("/home/wenduoc/ORCA/src_ablations/pretrained_embedders/best_deepsea_pretrained.pth")
-                    
-                    # target.projection[0].weight.data.copy_(trained_deepsea['model_state_dict']['Conv1.weight'])
-                    # target.projection[0].bias.data.copy_(trained_deepsea['model_state_dict']['Conv1.bias'])
-                    # target.projection[3].weight.data.copy_(trained_deepsea['model_state_dict']['Conv2.weight'])
-                    # target.projection[3].bias.data.copy_(trained_deepsea['model_state_dict']['Conv2.bias'])
-                    # target.projection[6].weight.data.copy_(trained_deepsea['model_state_dict']['Conv3.weight'])
-                    # target.projection[6].bias.data.copy_(trained_deepsea['model_state_dict']['Conv3.bias'])
-                    
-                    # target.projection[8].weight.data.copy_(trained_deepsea['model_state_dict']['Conv4.weight'])
-                    # target.projection[8].bias.data.copy_(trained_deepsea['model_state_dict']['Conv4.bias'])
-          
+            #             target.dash.load_state_dict(trained_dash, strict=False)
             if args.weight != 'hyenadna-small-32k-seqlen' and args.weight != 'llama' and args.weight != 'llama2' and args.weight != 'pythia-1b' and args.weight != 'flan-t5-small' and args.weight != 'flan-t5-base' and args.weight != 'flan-t5-large': 
                 target.norm.weight.data.copy_(source.LayerNorm.weight.data)
                 target.norm.bias.data.copy_(source.LayerNorm.bias.data)

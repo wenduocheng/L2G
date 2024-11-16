@@ -29,6 +29,11 @@ To use L2G with a specific configuration, run:
 python ./src/main.py --config ./src/configs/task.yaml
 ```
 
+If using Weights & Biases, create `src/wandb_key.py` with the following content:
+```python
+key = 'your_wandb_api_key_here'
+```
+
 ## Experiments
 
 ### NT Benchmark Experiment
@@ -46,6 +51,7 @@ cd ../../..
 ```
  
 2. **Run L2G** 
+
 Example usage:
 ```bash
 python ./src/main.py --config ./src/configs/nt_H4.yaml
@@ -67,6 +73,7 @@ cd ../../..
 ```
  
 2. **Run L2G**  
+
 Example usage:
 ```bash
 python ./src/main.py --config ./src/configs/human_enhancers_cohn.yaml
