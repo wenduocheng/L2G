@@ -15,7 +15,6 @@ wandb
 logs
 try*
 HyenaDNA
-*.sh
 *.log
 *.err
 *.out
