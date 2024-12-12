@@ -15,14 +15,12 @@ from torch.utils.data import DataLoader, Dataset
 from sklearn.model_selection import train_test_split
 from datasets import load_dataset
 
-#satellite
 import copy
 from functools import partial
 from pathlib import Path
-# import tifffile
 from torchvision.transforms import v2
 from torch.utils.data import default_collate
-# from data.satellite_datasets import load_bigearthnet, load_brick_kiln, load_EuroSAT, load_so2sat, load_forestnet, load_pv4ger
+
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -47,6 +45,7 @@ def load_geobench(dataset, batch_size, channels=None, root_dir = './data', valid
         raise ValueError(f"Unknown dataset: {dataset}")
 
 def load_nucleotide_transformer(batch_size, one_hot = True, valid_split=-1, dataset_name = 'enhancers', split_state=42):
+    # root_dir = root_dir + '/src/datasets'
     max_length_dict = {
         "enhancers": 200,
         "enhancers_types": 200,  # nclass=3

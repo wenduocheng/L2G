@@ -156,7 +156,7 @@ def load_nucleotide_transformer(root, batch_size, one_hot = True, valid_split=-1
         )
     ds_test = NucleotideTransformerDataset(
         max_length = max_length,
-        dest_path = root+ '/nucleotide_transformer_downstream_tasks',
+        dest_path = root + '/nucleotide_transformer_downstream_tasks',
         use_padding = use_padding,
         split = 'test',
         tokenizer=tokenizer,

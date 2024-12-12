@@ -10,7 +10,7 @@ hyperparameters:
     maxsamples: 256 
     target_seq_len: 128  
 
-    experiment_id: 6 
+    experiment_id: 7 
 
     seed: 0
     epochs: 25 
@@ -18,7 +18,7 @@ hyperparameters:
     pretrain_epochs: 60 
     predictor_epochs: 0 
     run_dash: True
-    backbone_select: True
+    backbone_select: False
     joint_optim: True
     alpha: 1 # weight for alignment loss 
     beta: 1 # weight for task loss

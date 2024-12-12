@@ -20,9 +20,10 @@ from networks.unet1d import UNet1D
 
 # import data loaders, task-specific losses and metrics
 # from data_loaders import load_cifar, load_mnist, load_deepsea, load_darcy_flow, load_psicov, load_music, load_ecg, load_satellite, load_ninapro, load_cosmic, load_spherical, load_fsd, load_geobench, load_traffic, load_nucleotide_transformer
-import sys 
-sys.path.append('./')
-from src.data_loaders import load_deepsea, load_deepsea_full, load_genomic_benchmarks, load_nucleotide_transformer, load_deepstarr
+# import sys 
+# sys.path.append('./')
+# from src.data_loaders import load_deepsea, load_deepsea_full, load_genomic_benchmarks, load_nucleotide_transformer, load_deepstarr
+from data_loaders import load_nucleotide_transformer
 # from satellite_data_loader.bigearth_loader import load_BigEarthNet
 # from satellite_data_loader.canadian_cropland_loader import load_cropland
 # from satellite_data_loader.fmow_loader import load_fmow
@@ -32,112 +33,22 @@ from src.data_loaders import load_deepsea, load_deepsea_full, load_genomic_bench
 # from data.ts_datasets import get_timeseries_dataloaders
 from pathlib import Path
 
-# ts_file_dict = {
-#     "ETTh1": "/ts_datasets/all_six_datasets/ETT-small/ETTh1.csv",
-#     "ETTh2": "/ts_datasets/all_six_datasets/ETT-small/ETTh2.csv",
-#     "ETTm1": "/ts_datasets/all_six_datasets/ETT-small/ETTm1.csv",
-#     "ETTm2": "/ts_datasets/all_six_datasets/ETT-small/ETTm2.csv",
-#     "ECL": "/ts_datasets/all_six_datasets/electricity/electricity.csv",
-#     "ER": "/ts_datasets/all_six_datasets/exchange_rate/exchange_rate.csv",
-#     "ILI": "/ts_datasets/all_six_datasets/illness/national_illness.csv",
-#     "Traffic": "/ts_datasets/all_six_datasets/traffic/traffic.csv",
-#     "Weather": "/ts_datasets/all_six_datasets/weather/weather.csv",
-# }
-
-# import customized optimizers
-# from optimizers import ExpGrad
-
+# ROOT = os.getcwd() + '/src/datasets'
 def get_data(root_dir, dataset, batch_size, arch, valid_split, split_state = 42):
     data_kwargs = None
-    root = "/home/wenduoc/ORCA/L2G/src/datasets/"
+    # root_dir = ROOT
+    print('root_dir', root_dir)
+     
 
     if dataset == "your_new_task": # modify this to experiment with a new task
         train_loader, val_loader, test_loader = None, None, None
-
-    # elif len(dataset.split("_")) > 1 and dataset.split("_")[0] in ts_file_dict:
-    #     params = dataset.split("_")
-    #     prefix = params[0]
-    #     horizon = int(params[1])
-    #     input_length = 96 if prefix == "ILI" else 512
-    #     train_loader, val_loader, test_loader = get_timeseries_dataloaders(
-    #         Path(root_dir+ts_file_dict[prefix]),
-    #         batch_size=batch_size,
-    #         seq_len=input_length,
-    #         forecast_horizon=horizon
-    #     ) 
     
     elif dataset in ['enhancers', 'enhancers_types', 'H3', 'H3K4me1', 'H3K4me2', 'H3K4me3', 'H3K9ac', 'H3K14ac', 'H3K36me3', 'H3K79me3', 'H4', 'H4ac', 'promoter_all', 'promoter_no_tata', 'promoter_tata', 'splice_sites_acceptors', 'splice_sites_donors','splice_sites_all']: 
-        train_loader, val_loader, test_loader = load_nucleotide_transformer(root, batch_size, one_hot = True, valid_split=valid_split, dataset_name = dataset)
-    elif dataset in ['ISCXVPN2016', 'USTC-TFC2016', 'CICIoT2022', 'ISCXTor2016']:
-        train_loader, val_loader, test_loader = load_traffic(dataset, root_dir, batch_size, valid_split=valid_split)
-    elif dataset == "big_earth_net":
-        train_loader, val_loader, test_loader = load_geobench(batch_size=batch_size, dataset='bigearthnet', root_dir=root_dir, valid_split=valid_split)
-    elif dataset == "brick_kiln":
-        train_loader, val_loader, test_loader = load_geobench(batch_size=batch_size, dataset='brickkiln', root_dir=root_dir, valid_split=valid_split)
-    elif dataset == "eurosat":
-        train_loader, val_loader, test_loader = load_geobench(batch_size=batch_size, dataset='eurosat', root_dir=root_dir, valid_split=valid_split)
-    elif dataset == "so2sat":
-        train_loader, val_loader, test_loader = load_geobench(batch_size = batch_size, dataset='so2sat', root_dir=root_dir, valid_split=valid_split)
-    elif dataset == "forestnet":
-        train_loader, val_loader, test_loader = load_geobench(batch_size=batch_size, dataset='forestnet', root_dir=root_dir, valid_split=valid_split)
-    elif dataset == "pv4ger":
-        train_loader, val_loader, test_loader = load_geobench(batch_size=batch_size, dataset='pv4ger', root_dir=root_dir, valid_split=valid_split)
-    elif dataset == "BigEarth":
-        train_loader, val_loader, test_loader = load_BigEarthNet(batch_size=batch_size, root_dir=root_dir)
-        n_train, n_val, n_test = len(train_loader), len(val_loader) if val_loader is not None else 0, len(test_loader)
-        if not valid_split:
-            val_loader = test_loader
-            n_val = n_test
+        train_loader, val_loader, test_loader = load_nucleotide_transformer( batch_size, one_hot = True, valid_split=valid_split, dataset_name = dataset)
 
-    elif dataset == "canadian_cropland":
-        train_loader, val_loader, test_loader = load_cropland(batch_size=batch_size, root_dir=root_dir)
-        n_train, n_val, n_test = len(train_loader), len(val_loader) if val_loader is not None else 0, len(test_loader)
-        if not valid_split:
-            val_loader = test_loader
-            n_val = n_test
-    elif dataset == "fmow":
-        train_loader, val_loader, test_loader = load_fmow(batch_size=batch_size, root_dir=root_dir)
-        n_train, n_val, n_test = len(train_loader), len(val_loader) if val_loader is not None else 0, len(test_loader)
-        if not valid_split:
-            val_loader = test_loader
-            n_val = n_test
-    elif dataset == "CIFAR10":
-        train_loader, val_loader, test_loader = load_cifar(root_dir, 10, batch_size, valid_split=valid_split)
-    elif dataset == "CIFAR10-PERM":
-        train_loader, val_loader, test_loader = load_cifar(root_dir, 10, batch_size, permute=True, valid_split=valid_split)
-    elif dataset == "CIFAR100":
-        train_loader, val_loader, test_loader = load_cifar(root_dir, 100, batch_size, valid_split=valid_split)
-    elif dataset == "CIFAR100-PERM":
-        train_loader, val_loader, test_loader = load_cifar(root_dir, 100, batch_size, permute=True, valid_split=valid_split)
-    elif dataset == "MNIST":
-        train_loader, val_loader, test_loader = load_mnist(root_dir, batch_size, valid_split=valid_split)
-    elif dataset == "MNIST-PERM":
-        train_loader, val_loader, test_loader = load_mnist(root_dir, batch_size, permute=True, valid_split=valid_split)
-    elif dataset == "SPHERICAL":
-        train_loader, val_loader, test_loader = load_spherical(root_dir, batch_size, valid_split=valid_split)
     elif dataset == "DEEPSEA":
         train_loader, val_loader, test_loader = load_deepsea(root_dir, batch_size, valid_split=valid_split)
-    elif dataset == "DARCY-FLOW-5":
-        train_loader, val_loader, test_loader, y_normalizer = load_darcy_flow(root_dir, batch_size, sub = 5, arch = arch, valid_split=valid_split)
-        data_kwargs = {"decoder": y_normalizer}
-    elif dataset == 'PSICOV':
-        train_loader, val_loader, test_loader, _, _ = load_psicov(root_dir, batch_size, valid_split=valid_split)
-    elif dataset[:5] == 'MUSIC':
-        if dataset[6] == 'J': length = 255
-        elif dataset[6] == 'N': length = 513
-        train_loader, val_loader, test_loader = load_music(root_dir, batch_size, dataset[6:], length=length, valid_split=valid_split)
-    elif dataset == "ECG":
-        train_loader, val_loader, test_loader = load_ecg(root_dir, batch_size, valid_split=valid_split)
-    elif dataset == "SATELLITE":
-        train_loader, val_loader, test_loader = load_satellite(root_dir, batch_size, valid_split=valid_split)
-    elif dataset == "NINAPRO":
-        train_loader, val_loader, test_loader = load_ninapro(root_dir, batch_size, arch, valid_split=valid_split)
-    elif dataset == "COSMIC":
-        valid_split = True
-        train_loader, val_loader, test_loader = load_cosmic(root_dir, batch_size, valid_split=valid_split)
-        data_kwargs = {'transform': mask}
-    elif dataset == "FSD":
-        train_loader, val_loader, test_loader = load_fsd(root_dir, batch_size, valid_split=valid_split)
+    
 
     n_train, n_val, n_test = len(train_loader), len(val_loader) if val_loader is not None else 0, len(test_loader)
 
@@ -232,38 +143,6 @@ def get_config(dataset, args=None):
         batch_size = 64
         arch_default = 'wrn'
 
-    # elif len(dataset.split("_")) > 1 and dataset.split("_")[0] in ts_file_dict:
-    #     params = dataset.split("_")
-    #     prefix = params[0]
-    #     horizon = int(params[1])
-    #     dims, sample_shape, num_classes = 1, (1, 1, 512), horizon
-    #     ks = [7, 9, 11, 13]
-    #     if horizon == 192:
-    #         ks = [9, 11, 13, 15]
-    #     if horizon == 336:
-    #         ks = [11, 13, 15, 17]
-    #     if horizon == 720:
-    #         ks = [13, 15, 17, 19]
-    #     kernel_choices_default, dilation_choices_default = ks, [1, 3, 7, 15]
-    #     loss = nn.MSELoss()
-
-    #     batch_size = 64
-    #     arch_default = 'wrn'
-
-    # elif dataset in ['ISCXVPN2016', 'USTC-TFC2016', 'CICIoT2022', 'ISCXTor2016']:
-    #     data2cls = {"ISCXVPN2016": 7, "ISCXTor2016": 8, "USTC-TFC2016": 20, "CICIoT2022": 10}
-    #     dims, sample_shape, num_classes = 1, (1, 1, 512), data2cls[dataset]
-    #     kernel_choices_default, dilation_choices_default = [3, 7, 11, 15, 19], [1, 3, 7, 15]
-    #     loss = nn.CrossEntropyLoss()
-    #     if dataset == 'ISCXTor2016':
-    #         config_kwargs['grad_scale'] = 500
-    #     config_kwargs['tokenized'] = True
-    #     config_kwargs['num_embeddings'] = 60005
-    #     config_kwargs['embedding_dim'] = 256
-    #     config_kwargs['mid_channels'] = 128
-
-    #     batch_size = 32
-    #     arch_default = 'wrn'
 
     elif dataset in ['enhancers', 'enhancers_types', 'H3', 'H3K4me1', 'H3K4me2', 'H3K4me3', 'H3K9ac', 'H3K14ac', 'H3K36me3', 'H3K79me3', 'H4', 'H4ac', 'promoter_all', 'promoter_no_tata', 'promoter_tata', 'splice_sites_acceptors', 'splice_sites_donors','splice_sites_all']: 
         kernel_choices_default, dilation_choices_default = [3, 5, 7, 9, 11], [1, 3, 5, 7]
@@ -539,8 +418,6 @@ def get_config(dataset, args=None):
 
     # if arch_default == 'wrn':
     if args.arch == 'wrn':
-        # epochs_default, retrain_epochs = 100, 150
-        # epochs_default, retrain_epochs = 100, 100
         epochs_default, retrain_epochs = 80, 10
         retrain_freq = epochs_default
         opt, arch_opt = partial(torch.optim.SGD, momentum=0.9, nesterov=True), partial(torch.optim.SGD, momentum=0.9, nesterov=True)
@@ -612,7 +489,7 @@ def get_config(dataset, args=None):
             return base ** (epoch // 20)
         
     elif args.arch  == 'unet':
-        epochs_default, retrain_epochs = 80, 10 # 100, 200
+        epochs_default, retrain_epochs = 80, 10 
         retrain_freq = epochs_default
         opt, arch_opt = partial(torch.optim.SGD, momentum=0.9, nesterov=True), partial(torch.optim.SGD, momentum=0.9, nesterov=True)
         weight_decay = 5e-4 

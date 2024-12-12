@@ -338,7 +338,7 @@ class Embeddings1D(nn.Module):
                     dash_result_path = f"./dash_results/results_acc/{args.dataset}/search_init/wrn/{args.seed}/dash_final_results.npy"
                     if not os.path.exists(dash_result_path):
                         print('Start to run DASH!')
-                        subprocess.run(f"python -W ignore ./DASH/search_init.py --dataset {args.dataset} --arch wrn --experiment_id wrn --seed {args.seed} --valid_split 0 --save_dir '/home/wenduoc/L2G/dash_results/' ", shell=True, check=True)
+                        subprocess.run(f"python -W ignore ./DASH/search_init.py --root_dir {root} --dataset {args.dataset} --arch wrn --experiment_id wrn --seed {args.seed} --valid_split 0 --save_dir '/home/wenduoc/L2G/dash_results/' ", shell=True, check=True)
                         print('DASH Finish!')
                     else:
                         print('Found existing DASH results!')
@@ -377,7 +377,7 @@ class Embeddings1D(nn.Module):
                 dash_result_path = f"./dash_results/results_acc/{args.dataset}/search_init/unet/{args.seed}/dash_final_results.npy"
                 if not os.path.exists(dash_result_path):
                     print('Start to run DASH!')
-                    subprocess.run(f"python -W ignore ./DASH/search_init.py --dataset {args.dataset} --arch unet --experiment_id unet --seed {args.seed} --valid_split 0 --save_dir '/home/wenduoc/L2G/dash_results/' ", shell=True, check=True)
+                    subprocess.run(f"python -W ignore ./DASH/search_init.py --root_dir {root} --dataset {args.dataset} --arch unet --experiment_id unet --seed {args.seed} --valid_split 0 --save_dir '/home/wenduoc/L2G/dash_results/' ", shell=True, check=True)
                     print('DASH Finish!')
                 else:
                     print('Found existing DASH results!')
@@ -405,7 +405,7 @@ class Embeddings1D(nn.Module):
                 dash_result_path = f"./dash_results/results_acc/{args.dataset}/search_init/deepsea/{args.seed}/dash_final_results.npy"
                 if not os.path.exists(dash_result_path):
                     print('Start to run DASH!')
-                    subprocess.run(f"python -W ignore ./DASH/search_init.py --dataset {args.dataset} --arch deepsea --experiment_id deepsea --seed {args.seed} --valid_split 0 --save_dir '/home/wenduoc/L2G/dash_results/' ", shell=True, check=True)
+                    subprocess.run(f"python -W ignore ./DASH/search_init.py --root_dir {root} --dataset {args.dataset} --arch deepsea --experiment_id deepsea --seed {args.seed} --valid_split 0 --save_dir '/home/wenduoc/L2G/dash_results/' ", shell=True, check=True)
                     print('DASH Finish!')
                 else:
                     print('Found existing DASH results!')

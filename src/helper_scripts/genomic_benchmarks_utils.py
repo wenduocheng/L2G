@@ -348,12 +348,13 @@ class NucleotideTransformerDataset(torch.utils.data.Dataset):
         self.truncate = truncate
         self.shift = 0
 
-        # change "val" split to "test".  No val available, just test
         if split == "val":
             split = "test"
 
         base_path = Path(dest_path) / dataset_name 
-        assert base_path.exists(), 'path to fasta file must exist'
+        # print('base_path', base_path, dest_path)
+        # print(base_path.exists())
+        # assert base_path.exists(), 'path to fasta file must exist'
 
         for file in (base_path.iterdir()):
             if (str(file).endswith('.fasta') or str(file).endswith('.fna') ) and split in str(file):  #
