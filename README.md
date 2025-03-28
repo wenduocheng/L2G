@@ -102,15 +102,4 @@ To integrate new datasets into the L2G framework, follow these steps:
 python ./src/main.py --config ./src/configs/task.yaml
 ```
 
-# Citation
-If you find this work useful, please consider citing our paper:
 
-```bibtex
-@article{cheng2024l2g,
-  title={L2G: Repurposing Language Models for Genomics Tasks},
-  author={Cheng, Wenduo and Shen, Junhong and Khodak, Mikhail and Ma, Jian and Talwalkar, Ameet},
-  journal={bioRxiv},
-  pages={2024--12},
-  year={2024},
-  publisher={Cold Spring Harbor Laboratory}
-}
